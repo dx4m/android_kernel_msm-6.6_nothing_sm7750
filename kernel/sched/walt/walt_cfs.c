@@ -1211,26 +1211,42 @@ static void binder_set_priority_hook(void *data,
 	bool from_inherit_failed = false;
 	bool to_inherit_failed = false;
 	bool inherit_rt = false;
+	bool oneway = !!(bndrtrans->flags & TF_ONE_WAY);
 	struct task_struct *from_proc = (bndrtrans->from ? bndrtrans->from->task : NULL);
 	struct task_struct *to_proc = (bndrtrans->to_proc ? bndrtrans->to_proc->tsk : NULL);
-	struct walt_task_struct *from_wts = (
-			from_proc ? (struct walt_task_struct *) from_proc->android_vendor_data1 : NULL);
-	struct walt_task_struct *to_wts = (
-			to_proc ? (struct walt_task_struct *) to_proc->android_vendor_data1 : NULL);
+	struct walt_task_struct *from_wts = NULL;
+	struct walt_task_struct *to_wts = NULL;
 #endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 
 	if (unlikely(walt_disabled))
 		return;
 
 #if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+	if (!bndrtrans) {
+		return;
+	}
+
+	/*
+	 * from_proc will be null if transaction with oneway flag.
+	 * So get the from_proc from t->from_tid while transaction
+	 * with oneway flag.
+	 */
+	if (oneway) {
+		rcu_read_lock();
+		from_proc = find_task_by_vpid(bndrtrans->from_tid);
+		rcu_read_unlock();
+	}
+
+	from_wts = (from_proc ? (struct walt_task_struct *) from_proc->android_vendor_data1 : NULL);
+	to_wts = (to_proc ? (struct walt_task_struct *) to_proc->android_vendor_data1 : NULL);
+
 	/*
 	 * 1. Check is boost by nt_sched_per_task_boost
 	 * 2. If already boost and inherit rt by us, don't need to
 	 *    check by origin method again
 	 */
-	if (bndrtrans
-			&& ((from_wts && from_wts->nt_boost == TASK_BOOST_STRICT_MAX)
-				|| (to_wts && to_wts->nt_boost == TASK_BOOST_STRICT_MAX))) {
+	if ((from_wts && from_wts->nt_boost == TASK_BOOST_STRICT_MAX)
+				|| (to_wts && to_wts->nt_boost == TASK_BOOST_STRICT_MAX)) {
 		do {
 			/* Already inherit by us */
 			if (task->policy == SCHED_RR
@@ -1284,7 +1300,7 @@ try_inherit_to:
 			}
 		} while (0);
 	} else {
-		if (bndrtrans && bndrtrans->need_reply && current_wts->boost == TASK_BOOST_STRICT_MAX) {
+		if (bndrtrans->need_reply && current_wts->boost == TASK_BOOST_STRICT_MAX) {
 			bndrtrans->android_vendor_data1  = wts->boost;
 			wts->boost = TASK_BOOST_STRICT_MAX;
 		}
