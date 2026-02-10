@@ -1135,22 +1135,26 @@ walt_select_task_rq_fair(void *unused, struct task_struct *p, int prev_cpu,
 }
 
 #if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
-static bool nt_binder_task_inherit_rt_by_task(struct binder_transaction *t, struct task_struct *binder_task, struct task_struct *task, bool inherit_rt)
+static bool nt_binder_task_inherit_boost_and_rt(struct binder_transaction *t, struct task_struct *binder_task, int boost, bool inherit_rt)
 {
 	bool ret = false;
 	struct walt_task_struct *binder_task_wts = (
 			binder_task ? (struct walt_task_struct *) binder_task->android_vendor_data1 : NULL);
-	struct walt_task_struct *task_wts = (
-			task ? (struct walt_task_struct *) task->android_vendor_data1 : NULL);
 	struct sched_param rt_param = { .sched_priority = 1 };
 
-	if (!t || !binder_task || !task || !binder_task_wts || !task_wts) {
+	if (!t || !binder_task || !binder_task_wts) {
 		goto out;
 	}
 
-	if (binder_task_wts->boost != TASK_BOOST_STRICT_MAX) {
-		t->android_vendor_data1  = binder_task_wts->boost;
-		binder_task_wts->boost = TASK_BOOST_STRICT_MAX;
+	if (binder_task_wts->boost < boost) {
+		t->android_vendor_data1 = binder_task_wts->boost;
+		binder_task_wts->boost = boost;
+	} else if (t->android_vendor_data1 < boost) {
+		/*
+		 * Somebody is sending important transaction
+		 * inherit 2nd choice
+		 */
+		t->android_vendor_data1 = boost;
 	}
 
 	if (inherit_rt) {
@@ -1206,10 +1210,7 @@ static void binder_set_priority_hook(void *data,
 	struct walt_task_struct *current_wts =
 			(struct walt_task_struct *) current->android_vendor_data1;
 #if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
-	bool inherit_by_from = false;
-	bool inherit_by_to = false;
-	bool from_inherit_failed = false;
-	bool to_inherit_failed = false;
+	int inherit_boost = TASK_BOOST_NONE;
 	bool inherit_rt = false;
 	bool oneway = !!(bndrtrans->flags & TF_ONE_WAY);
 	struct task_struct *from_proc = (bndrtrans->from ? bndrtrans->from->task : NULL);
@@ -1245,60 +1246,38 @@ static void binder_set_priority_hook(void *data,
 	 * 2. If already boost and inherit rt by us, don't need to
 	 *    check by origin method again
 	 */
-	if ((from_wts && from_wts->nt_boost == TASK_BOOST_STRICT_MAX)
-				|| (to_wts && to_wts->nt_boost == TASK_BOOST_STRICT_MAX)) {
-		do {
-			/* Already inherit by us */
-			if (task->policy == SCHED_RR
-					&& wts->boost == TASK_BOOST_STRICT_MAX) {
-				break;
+	if ((from_wts && from_wts->nt_boost != TASK_BOOST_NONE)
+				|| (to_wts && to_wts->nt_boost != TASK_BOOST_NONE)) {
+		/* Start check from from_proc */
+		if (from_proc) {
+			if (!from_wts || from_wts->nt_boost == TASK_BOOST_NONE) {
+				goto check_to_proc;
 			}
 
-			/* Start check from from_proc */
-			if (from_proc) {
-				if (!from_wts || from_wts->nt_boost != TASK_BOOST_STRICT_MAX) {
-					goto check_to_proc;
-				}
+			/* TODO: Any inherit restriction ? */
 
-				/* TODO: Any inherit restriction ? */
-
-				inherit_rt |= rt_policy(from_proc->policy);
-				inherit_by_from = true;
-			}
+			inherit_boost = from_wts->nt_boost;
+			inherit_rt |= rt_policy(from_proc->policy);
+		}
 
 check_to_proc:
-			if (to_proc) {
-				if (!to_wts || to_wts->nt_boost != TASK_BOOST_STRICT_MAX) {
-					goto try_inherit_from;
-				}
-
-				/* TODO: Any inherit restriction ? */
-
-				inherit_rt |= rt_policy(to_proc->policy);
-				inherit_by_to = true;
+		if (to_proc) {
+			if (!to_wts || to_wts->nt_boost == TASK_BOOST_NONE) {
+				goto try_inherit;
 			}
 
-try_inherit_from:
-			if (inherit_by_from) {
-				if (nt_binder_task_inherit_rt_by_task(bndrtrans, task, from_proc, inherit_rt)) {
-					/* Success */
-					break;
-				}
+			/* TODO: Any inherit restriction ? */
 
-				from_inherit_failed = true;
-				goto try_inherit_to;
+			if (inherit_boost < to_wts->nt_boost) {
+				inherit_boost = to_wts->nt_boost;
 			}
+			inherit_rt |= rt_policy(to_proc->policy);
+		}
 
-try_inherit_to:
-			if (inherit_by_to) {
-				if (nt_binder_task_inherit_rt_by_task(bndrtrans, task, to_proc, inherit_rt)) {
-					/* Success */
-					break;
-				}
-
-				to_inherit_failed = true;
-			}
-		} while (0);
+try_inherit:
+		if (inherit_rt || inherit_boost != TASK_BOOST_NONE) {
+			nt_binder_task_inherit_boost_and_rt(bndrtrans, task, inherit_boost, inherit_rt);
+		}
 	} else {
 		if (bndrtrans->need_reply && current_wts->boost == TASK_BOOST_STRICT_MAX) {
 			bndrtrans->android_vendor_data1  = wts->boost;
@@ -1344,7 +1323,7 @@ static void binder_restore_priority_hook(void *data,
 		return;
 
 #if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
-	if (bndrtrans && wts->boost == TASK_BOOST_STRICT_MAX) {
+	if (bndrtrans && wts->boost != TASK_BOOST_NONE) {
 		wts->boost = bndrtrans->android_vendor_data1;
 		bndrtrans->android_vendor_data1 = TASK_BOOST_NONE;
 
