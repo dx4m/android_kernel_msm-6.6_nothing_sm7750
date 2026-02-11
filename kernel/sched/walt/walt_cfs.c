@@ -1146,6 +1146,15 @@ static bool nt_binder_task_inherit_boost_and_rt(struct binder_transaction *t, st
 		goto out;
 	}
 
+	if (trace_nt_binder_inherit_boost_and_rt_enabled()) {
+		trace_nt_binder_inherit_boost_and_rt(
+				binder_task_wts,
+				t->android_vendor_data1,
+				boost,
+				inherit_rt,
+				0);
+	}
+
 	if (binder_task_wts->boost < boost) {
 		t->android_vendor_data1 = binder_task_wts->boost;
 		binder_task_wts->boost = boost;
@@ -1172,6 +1181,15 @@ static bool nt_binder_task_inherit_boost_and_rt(struct binder_transaction *t, st
 
 done:
 	ret = true;
+
+	if (trace_nt_binder_inherit_boost_and_rt_enabled()) {
+		trace_nt_binder_inherit_boost_and_rt(
+				binder_task_wts,
+				t->android_vendor_data1,
+				boost,
+				inherit_rt,
+				1);
+	}
 
 out:
 	return ret;
@@ -1324,11 +1342,25 @@ static void binder_restore_priority_hook(void *data,
 
 #if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
 	if (bndrtrans && wts->boost != TASK_BOOST_NONE) {
+		if (trace_nt_binder_restore_boost_and_policy_enabled()) {
+			trace_nt_binder_restore_boost_and_policy(
+					wts,
+					bndrtrans->android_vendor_data1,
+					0);
+		}
+
 		wts->boost = bndrtrans->android_vendor_data1;
 		bndrtrans->android_vendor_data1 = TASK_BOOST_NONE;
 
 		if (wts->policy_backup > 0) {
 			nt_binder_task_restore_policy(task);
+		}
+
+		if (trace_nt_binder_restore_boost_and_policy_enabled()) {
+			trace_nt_binder_restore_boost_and_policy(
+					wts,
+					bndrtrans->android_vendor_data1,
+					1);
 		}
 	}
 #else /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */

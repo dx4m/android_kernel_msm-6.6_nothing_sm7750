@@ -2078,6 +2078,72 @@ TRACE_EVENT(walt_oscillate,
 		__entry->pid, __entry->src_cpu, __entry->dst_cpu,
 		__entry->oscillate_cpu, __entry->reason)
 );
+
+TRACE_EVENT(nt_binder_inherit_boost_and_rt,
+
+	TP_PROTO(struct walt_task_struct *wts, int backup_boost, int boost, bool inherit_rt, int stage),
+
+	TP_ARGS(wts, backup_boost, boost, inherit_rt, stage),
+
+	TP_STRUCT__entry(
+		__field(pid_t,		binder_pid)
+		__field(int,		cur_boost)
+		__field(int,		backup_boost)
+		__field(int,		cur_policy)
+		__field(int,		backup_policy)
+		__field(int,		to_boost)
+		__field(bool,		to_rt)
+		__field(int,		stage)
+	),
+
+	TP_fast_assign(
+		__entry->binder_pid		= wts_to_ts(wts)->pid;
+		__entry->cur_boost		= wts->boost;
+		__entry->backup_boost	= backup_boost;
+		__entry->cur_policy		= wts_to_ts(wts)->policy;
+		__entry->backup_policy	= wts->policy_backup;
+		__entry->to_boost		= boost;
+		__entry->to_rt			= inherit_rt;
+		__entry->stage			= stage;
+	),
+
+	TP_printk("pid=%d, cur_boost=%d backup_boost=%d cur_policy=%d backup_policy=%d to_boost=%d to_rt=%d stage=%d",
+			__entry->binder_pid, __entry->cur_boost,
+			__entry->backup_boost, __entry->cur_policy,
+			__entry->backup_policy, __entry->to_boost,
+			__entry->to_rt, __entry->stage)
+);
+
+TRACE_EVENT(nt_binder_restore_boost_and_policy,
+
+	TP_PROTO(struct walt_task_struct *wts, int backup_boost, int stage),
+
+	TP_ARGS(wts, backup_boost, stage),
+
+	TP_STRUCT__entry(
+		__field(pid_t,		binder_pid)
+		__field(int,		cur_boost)
+		__field(int,		backup_boost)
+		__field(int,		cur_policy)
+		__field(int,		backup_policy)
+		__field(int,		stage)
+	),
+
+	TP_fast_assign(
+		__entry->binder_pid		= wts_to_ts(wts)->pid;
+		__entry->cur_boost		= wts->boost;
+		__entry->backup_boost	= backup_boost;
+		__entry->cur_policy		= wts_to_ts(wts)->policy;
+		__entry->backup_policy	= wts->policy_backup;
+		__entry->stage			= stage;
+	),
+
+	TP_printk("pid=%d, cur_boost=%d backup_boost=%d cur_policy=%d backup_policy=%d stage=%d",
+			__entry->binder_pid, __entry->cur_boost,
+			__entry->backup_boost, __entry->cur_policy,
+			__entry->backup_policy, __entry->stage)
+);
+
 #endif /* _TRACE_WALT_H */
 
 #undef TRACE_INCLUDE_PATH
