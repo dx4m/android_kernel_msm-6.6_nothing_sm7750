@@ -141,6 +141,10 @@ int set_task_boost(int boost, u64 period)
 		wts->boost_expires = 0;
 		wts->boost_period = 0;
 	}
+#if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+	wts->ori_boost = boost;
+	wts->boost = wts->nt_boost ? wts->nt_boost : wts->boost;
+#endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 	return 0;
 }
 EXPORT_SYMBOL_GPL(set_task_boost);
@@ -2822,7 +2826,9 @@ static inline void __sched_fork_init(struct task_struct *p)
 	wts->boost_expires	= 0;
 	wts->boost_period	= false;
 #if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
-	wts->nt_boost		= 0;
+	wts->ori_boost = 0;
+	wts->nt_boost = 0;
+	wts->nt_inherit_boost = 0;
 	wts->policy_backup	= -1;
 #endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 	wts->low_latency	= false;

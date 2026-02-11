@@ -125,7 +125,9 @@ struct walt_task_struct {
 	u64				last_win_size;
 	int				boost;
 #if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+	int				ori_boost;
 	int				nt_boost;
+	int				nt_inherit_boost;
 	int				policy_backup;
 #endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 	bool				wake_up_idle;

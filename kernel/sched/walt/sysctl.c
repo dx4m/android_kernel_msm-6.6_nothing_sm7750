@@ -546,15 +546,13 @@ static int sched_task_handler(struct ctl_table *table, int write,
 			ret = -EINVAL;
 			goto put_task;
 		}
-#if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
-		if (wts->nt_boost != 0) {
-			wts->boost = wts->nt_boost;
-			break;
-		}
-#endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 		wts->boost = val;
 		if (val == 0)
 			wts->boost_period = 0;
+#if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+		wts->ori_boost = val;
+		wts->boost = wts->nt_boost ? wts->nt_boost : wts->boost;
+#endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 		break;
 	case PER_TASK_BOOST_PERIOD_MS:
 		if (wts->boost == 0 && val) {
@@ -573,8 +571,6 @@ static int sched_task_handler(struct ctl_table *table, int write,
 		}
 		wts->nt_boost = val;
 		wts->boost = wts->nt_boost;
-		if (val == 0)
-			wts->boost_period = 0;
 		break;
 #endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 	case LOW_LATENCY:

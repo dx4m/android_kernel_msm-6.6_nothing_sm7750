@@ -854,6 +854,10 @@ static inline int per_task_boost(struct task_struct *p)
 			wts->boost_period = 0;
 			wts->boost_expires = 0;
 			wts->boost = 0;
+#if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+			wts->ori_boost = 0;
+			wts->boost = wts->nt_boost ? wts->nt_boost : 0;
+#endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 		}
 	}
 
