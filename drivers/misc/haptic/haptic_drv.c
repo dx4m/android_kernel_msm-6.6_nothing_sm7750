@@ -881,6 +881,20 @@ static ssize_t lk_f0_show(struct device *dev,
 	return len;
 
 }
+
+static ssize_t play_state_show(struct device *dev,
+        struct device_attribute *attr, char *buf)
+{
+	vib_dev_t *vdev = dev_get_drvdata(dev);
+	struct ics_haptic_data *haptic_data = container_of(vdev, struct ics_haptic_data, vib_dev);
+	int32_t ret = 0;
+	uint32_t reg_val = 0;
+
+	ret = regmap_read(haptic_data->regmap, RT6010_REG_ERROR_CODE, &reg_val);
+	check_error_return(ret);
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", reg_val);
+}
 ///////////////////////////////////////////////////////////////////////////////
 // haptic sys attribute nodes
 ///////////////////////////////////////////////////////////////////////////////
@@ -911,6 +925,7 @@ static DEVICE_ATTR(adc_offset, S_IWUSR | S_IRUGO, adc_offset_show, NULL);
 static DEVICE_ATTR(cali, S_IWUSR | S_IRUGO, NULL, cali_store);
 static DEVICE_ATTR(gpp, S_IWUSR | S_IRUGO, gpp_show, NULL);
 static DEVICE_ATTR(lk_f0, S_IWUSR | S_IRUGO, lk_f0_show, NULL);
+static DEVICE_ATTR(play_state, S_IWUSR | S_IRUGO, play_state_show, NULL);
 
 static struct attribute *ics_haptic_attributes[] = {
 	&dev_attr_chip_id.attr,
@@ -940,6 +955,7 @@ static struct attribute *ics_haptic_attributes[] = {
 	&dev_attr_cali.attr,
 	&dev_attr_gpp.attr,
 	&dev_attr_lk_f0.attr,
+	&dev_attr_play_state.attr,
 	NULL
 };
 
