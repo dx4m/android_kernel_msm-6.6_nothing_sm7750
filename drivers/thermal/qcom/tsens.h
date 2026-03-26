@@ -651,7 +651,8 @@ struct tsens_priv {
 	struct dentry			*debug;
 	void				*ipc_log;
 	void				*ipc_log1;
-
+	/* add for save tsens data into minidump */
+	struct minidump_data	*tsens_md;
 	struct tsens_sensor		*cold_sensor;
 	struct tsens_sensor		sensor[];
 };

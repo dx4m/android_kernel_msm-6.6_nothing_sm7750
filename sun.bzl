@@ -269,6 +269,7 @@ def define_sun():
         "drivers/thermal/qcom/qti_thermal_vendor_hooks.ko",
         "drivers/thermal/qcom/qti_userspace_cdev.ko",
         "drivers/thermal/qcom/thermal_config.ko",
+        "drivers/thermal/qcom/thermal_minidump.ko",
         "drivers/thermal/qcom/thermal_pause.ko",
         "drivers/tty/hvc/hvc_gunyah.ko",
         "drivers/tty/serial/msm_geni_serial.ko",

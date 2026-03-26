@@ -20,6 +20,7 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/thermal.h>
+#include <linux/thermal_minidump.h>
 #include <linux/slab.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/adc/qcom-vadc-common.h>
@@ -271,6 +272,7 @@ struct adc5_chip {
 	struct work_struct		tm_err_handler_work;
 	u8				*conv_err;
 	spinlock_t			tm_lock;
+	struct minidump_data		*adc_md;
 };
 
 static int adc5_read(struct adc5_chip *adc, unsigned int sdam_index, u16 offset, u8 *data, int len)
@@ -957,9 +959,15 @@ int adc_tm_gen3_get_temp(struct thermal_zone_device *tz, int *temp)
 	if (ret < 0)
 		return ret;
 
-	return qcom_adc5_hw_scale(prop->scale_fn_type,
+	ret = qcom_adc5_hw_scale(prop->scale_fn_type,
 		prop->prescale, prop->data,
 		adc_code_volt, temp);
+
+	/* Save temperature data to minidump */
+	if (prop->chip->adc_md && prop->tzd)
+		thermal_minidump_update_data(prop->chip->adc_md,
+			prop->tzd->type, temp);
+	return ret;
 }
 
 static int adc_tm5_gen3_configure(struct adc5_channel_prop *prop)
@@ -1979,7 +1987,7 @@ static int adc5_gen3_probe(struct platform_device *pdev)
 	ret = adc_tm_register_tzd(adc);
 	if (ret < 0)
 		goto fail;
-
+	adc->adc_md = thermal_minidump_register("adc5_gen3");
 	if (adc->n_tm_channels) {
 		INIT_WORK(&adc->tm_handler_work, tm_handler_work);
 		INIT_WORK(&adc->tm_err_handler_work, tm_err_handler_work);
@@ -2050,6 +2058,8 @@ static int adc5_gen3_exit(struct platform_device *pdev)
 	list_del(&adc->list);
 
 	ipc_log_context_destroy(adc->ipc_log);
+
+	thermal_minidump_unregister(adc->adc_md);
 
 	return 0;
 }

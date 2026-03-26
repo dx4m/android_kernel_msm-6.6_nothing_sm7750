@@ -15,6 +15,7 @@ mem_buf_msgq.ko
 msm_dma_iommu_mapping.ko
 qcom-pdc.ko
 dcc_v2.ko
+thermal_minidump.ko
 debug_symbol.ko
 minidump.ko
 qcom_logbuf_vendor_hooks.ko
