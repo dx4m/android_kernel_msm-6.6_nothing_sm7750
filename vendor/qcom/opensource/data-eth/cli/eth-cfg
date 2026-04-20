@@ -1,0 +1,137 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+
+set -e
+
+EINVAL=22
+ENOENT=2
+
+print_usage() {
+	echo "
+Usage:
+	eth-cfg <action> <dev> [optional params]
+
+	eth-cfg configure DEV [CONFIG-PARAMS]
+
+		CONFIG-PARAMS := [ --ipa-offload <enable|disable> ]
+
+	eth-cfg show DEV
+	"
+}
+
+file_exists() {
+	local file="$1"
+
+	if [ ! -f "$file" ]; then
+		echo "$file - File does not exist"
+		return $ENOENT
+	else
+		return 0
+	fi
+}
+
+set_ipa_offload() {
+	local ipa_offload="$1"
+	local file="/sys/class/net/$interface/suspend_ipa_offload"
+
+	file_exists "$file"
+	if [ $? -eq $ENOENT ]; then
+		return $EINVAL
+	fi
+
+	if [[ "$ipa_offload" == "enable" ]]; then
+		echo 0 > /sys/class/net/$interface/suspend_ipa_offload
+	elif [[ "$ipa_offload" == "disable" ]]; then
+		echo 1 > /sys/class/net/$interface/suspend_ipa_offload
+	else
+		echo "Invalid value - $ipa_offload for configuring IPA offload"
+	fi
+
+	return 0
+}
+
+add_configuration() {
+	local ipa_offload=""
+
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			"--ipa-offload")
+				shift
+				if [[ $# -gt 0 ]]; then
+					ipa_offload="$1"
+					shift
+				fi
+				;;
+			*)
+				echo "Unknown option $1"
+				print_usage
+				return $EINVAL
+		esac
+	done
+
+	if [[ -z "$ipa_offload" ]]; then
+		echo "Empty configuration command"
+		print_usage
+		return $EINVAL
+	fi
+
+	set_ipa_offload "$ipa_offload"
+	return $?
+}
+
+configure() {
+	if [[ $# -lt 1 ]]; then
+		print_usage
+		return $EINVAL
+	fi
+
+	interface="$1"
+	shift
+
+	add_configuration $@
+	return $?
+}
+
+show() {
+	if [[ $# -lt 1 ]]; then
+		print_usage
+		return $EINVAL
+	fi
+
+	local interface="$1"
+	shift
+
+	if [[ $# -gt 0 ]]; then
+		echo "Unexpected extra arguments"
+		print_usage
+		return $EINVAL
+	fi
+
+	local file="/sys/class/net/$interface/suspend_ipa_offload"
+	file_exists "$file"
+
+	if [ $? -eq $ENOENT ]; then
+		return $EINVAL
+	fi
+
+	local ipa_offload=$(cat "$file")
+
+	if [[ "$ipa_offload" == 0 ]]; then
+		echo "IPA Offload: Enabled"
+	else
+		echo "IPA offload: Disabled"
+	fi
+
+	return 0
+}
+
+if [ "$1" == "configure" ]; then
+	shift
+	configure $@
+elif [ "$1" == "show" ]; then
+	shift
+	show $@
+else
+	print_usage
+fi

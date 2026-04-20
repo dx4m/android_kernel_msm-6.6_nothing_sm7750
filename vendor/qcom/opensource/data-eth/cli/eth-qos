@@ -1,0 +1,358 @@
+#!/bin/bash
+# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only
+
+set -e
+
+# Use this as error code for incomplete commands
+EINVAL=1
+
+add_flow() {
+	local handle=""
+	if [[ "$1" == "-h" ]]; then
+		shift
+		handle="$1"
+		shift
+	fi
+
+	local smac=""
+	local dmac=""
+	local vlan=""
+	local pcp=""
+	local src=""
+	local dst=""
+
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			"--smac")
+				shift
+				while [[ $# -gt 0 && "$1" != "-"* ]]; do
+					smac+=" $1"
+					shift
+				done
+				;;
+			"--dmac")
+				shift
+				while [[ $# -gt 0 && "$1" != "-"* ]]; do
+					dmac+=" $1"
+					shift
+				done
+				;;
+			"--vlan")
+				shift
+				while [[ $# -gt 0 && "$1" != "-"* ]]; do
+					vlan+=" $1"
+					shift
+				done
+				;;
+			"--pcp")
+				shift
+				while [[ $# -gt 0 && "$1" != "-"* ]]; do
+					pcp+=" $1"
+					shift
+				done
+				;;
+			"--src")
+				shift
+				while [[ $# -gt 0 && "$1" != "-"* ]]; do
+					src+=" $1"
+					shift
+				done
+				;;
+			"--dst")
+				shift
+				while [[ $# -gt 0 && "$1" != "-"* ]]; do
+					dst+=" $1"
+					shift
+				done
+				;;
+			"-h")
+				break
+				;;
+			*)
+				echo "Unknown option $1"
+				print_usage
+				exit 1
+				;;
+		esac
+	done
+
+	# Remove leading spaces
+	smac="${smac:1}"
+	dmac="${dmac:1}"
+	vlan="${vlan:1}"
+	pcp="${pcp:1}"
+	src="${src:1}"
+	dst="${dst:1}"
+
+	if [ -z "$smac" ] && [ -z "$dmac" ] && [ -z "$vlan" ] && \
+		[ -z "$pcp" ] && [ -z "$src" ] && [ -z "$dst" ];
+	then
+		echo "empty handle detected"
+		print_usage
+		return $EINVAL
+	fi
+
+	if [ -z "$handle" ]; then
+		if [ -f /sys/class/net/"$dev"/qos/add_handle ]; then
+			handle="0"
+			echo "$handle" > /sys/class/net/"$dev"/qos/add_handle
+		fi
+	else
+		echo "$handle" > /sys/class/net/"$dev"/qos/add_handle
+	fi
+
+	if [ -n "$smac" ]; then
+		echo "$smac" > /sys/class/net/"$dev"/qos/add_tc_params/smac
+	fi
+	if [ -n "$dmac" ]; then
+		echo "$dmac" > /sys/class/net/"$dev"/qos/add_tc_params/dmac
+	fi
+	if [ -n "$vlan" ]; then
+		echo "$vlan" > /sys/class/net/"$dev"/qos/add_tc_params/vlan_id
+	fi
+	if [ -n "$pcp" ]; then
+		echo "$pcp" > /sys/class/net/"$dev"/qos/add_tc_params/pcp
+	fi
+	if [ -n "$src" ]; then
+		echo "$src" > /sys/class/net/"$dev"/qos/add_tc_params/src
+	fi
+	if [ -n "$dst" ]; then
+		echo "$dst" > /sys/class/net/"$dev"/qos/add_tc_params/dst
+	fi
+
+	if [ -n "$handle" ]; then
+		echo "done" > /sys/class/net/"$dev"/qos/add_handle
+	fi
+
+}
+
+add_tc () {
+	if [[ $# -lt 5 ]];
+	then
+		print_usage
+		return $EINVAL
+	fi
+
+	dev="$1"
+	shift
+	dir="$1"
+	shift
+	tc="$1"
+	shift
+
+	action=""
+
+	local bw=""
+	local tx_handle=""
+
+	if [[ "$1" == "--action" ]]; then
+		shift
+		action="$1"
+		shift
+	else
+		print_usage
+		return $EINVAL
+	fi
+
+	echo "$dir" "$tc" > /sys/class/net/"$dev"/qos/add_tc
+
+	if [ -n "$action" ]; then
+		echo "$dir" "$action" > /sys/class/net/"$dev"/qos/add_tc_params/action
+	fi
+
+	if [[ "$dir" == "rx" ]]; then
+		if [[ "$1" == "-h" ]]; then
+			while [[ $# -gt 0 ]]; do
+				case "$1" in
+					"-h")
+						add_flow $@
+						shift
+						;;
+					*)
+						shift
+						;;
+				esac
+			done
+		else
+			add_flow $@
+		fi
+	fi
+
+	if [[ "$dir" == "tx" ]]; then
+		while [[ $# -gt 0 ]]; do
+			case "$1" in
+				"--bw")
+					shift
+					bw="$1"
+					shift
+					;;
+				"-h")
+					if [[ -z "$tx_handle" ]]; then
+						shift
+						tx_handle="$1"
+						shift
+					else
+						shift
+						shift
+					fi
+					;;
+				"--pcp")
+					shift
+					while [[ $# -gt 0 && "$1" != "--"* && "$1" != "-"* ]]; do
+						pcp+=" $1"
+						shift
+					done
+					;;
+				"--"*|*)
+					echo "Ignoring argument $1"
+					shift
+					;;
+			esac
+		done
+		if [ -n "$bw" ]; then
+			echo "$bw" > /sys/class/net/"$dev"/qos/add_tc_params/bw
+		fi
+		if [ -n "$pcp" ]; then
+			echo "$pcp" > /sys/class/net/"$dev"/qos/add_tc_params/tx_pcp
+		fi
+		if [ -n "$tx_handle" ]; then
+			echo "$tx_handle" > /sys/class/net/"$dev"/qos/tx_handle
+		fi
+	fi
+
+	echo "$dir" "done" > /sys/class/net/"$dev"/qos/add_tc
+}
+
+del_tc () {
+	if [[ $# -lt 3 ]];
+	then
+		print_usage
+		return $EINVAL
+	fi
+
+	local dev="$1"
+	shift
+	local dir="$1"
+	shift
+	local tc="$1"
+	shift
+
+	if [[ $# -gt 0 ]];
+	then
+		echo "Unexpected extra arguments"
+		print_usage
+		return $EINVAL
+	fi
+
+	echo "$dir" "$tc" > /sys/class/net/"$dev"/qos/del_tc
+}
+
+clear_table () {
+	if [[ $# -lt 1 ]];
+	then
+		print_usage
+		return $EINVAL
+	fi
+
+	local dev="$1"
+	shift
+	local cmd="clear"
+
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			"--pending")
+				shift
+				cmd+="-pending"
+				;;
+			"--"*|*)
+				echo "Unknown option $1"
+				print_usage
+				exit 1
+				;;
+		esac
+	done
+
+	echo "$cmd" > /sys/class/net/"$dev"/qos/qos_table
+}
+
+show () {
+	if [[ $# -lt 1 ]];
+	then
+		print_usage
+		return $EINVAL
+	fi
+
+	local dev="$1"
+	shift
+
+	cat /sys/class/net/"$dev"/qos/qos_table
+}
+
+commit() {
+	if [[ $# -lt 1 ]];
+	then
+		print_usage
+		return $EINVAL
+	fi
+
+	local dev="$1"
+	shift
+
+	echo 1 > /sys/class/net/"$dev"/qos/commit
+}
+
+info() {
+	if [[ $# -lt 1 ]];
+	then
+		print_usage
+		return $EINVAL
+	fi
+
+	local dev="$1"
+	shift
+
+	cat /sys/class/net/"$dev"/qos/info
+}
+
+print_usage() {
+	echo "
+Usage:
+	eth-qos <op> <dev> <rx|tx> <tc-id> [optional params]
+
+	eth-qos add DEV DIR TC-ID --action <sw|hw> [TC-PARAMS]
+	eth-qos del DEV DIR TC-ID
+	eth-qos clear DEV [--pending]
+	eth-qos show DEV
+	eth-qos commit DEV
+	eth-qos info DEV
+	"
+}
+
+if [ "$1" == "add" ]
+then
+	shift
+	add_tc $@
+elif [ "$1" == "del" ]
+then
+	shift
+	del_tc $@
+elif [ "$1" == "clear" ]
+then
+	shift
+	clear_table $@
+elif [ "$1" == "show" ]
+then
+	shift
+	show $@
+elif [ "$1" == "commit" ]
+then
+	shift
+	commit $@
+elif [ "$1" == "info" ]
+then
+	shift
+	info $@
+else
+	print_usage
+fi

@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "kera-nfc-common_froggerpro.dtsi"
+/ {
+        model = "Qualcomm Technologies, Inc. Kera QRD";
+        compatible = "qcom,kera", "qcom,kera-qrd", "qcom,kera", "qcom,qrd";
+        qcom,msm-id = <686 0x10000>, <659 0x10000>;
+        qcom,board-id = <0x30008 0>, <0x30008 1>, <0x01000B 0>;
+};

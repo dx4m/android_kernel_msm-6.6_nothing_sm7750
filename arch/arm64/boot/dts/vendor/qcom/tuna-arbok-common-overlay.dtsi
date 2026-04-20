@@ -1,0 +1,15 @@
+// Get UEFI Log info from xbl memmap.dtsi
+// reg = <0x0 0x81CE4000 0x0 0x00010000>;
+// mem-label = "UEFI_Log";
+&soc {
+	bootloader_log {
+		compatible = "nothing,bootloader_log";
+		memory-region = <&uefi_log_mem>;
+	};
+
+	nothing_secure_element {
+		compatible = "nothing,secure_element";
+		// HWIO_OEM_SECURITY_POLICY_LSB_ADDR
+		oem_sec_boot_addr = <0x221c8cf0>;
+	};
+};

@@ -1,0 +1,204 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2023-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+#include "tuna-audio-overlay.dtsi"
+&tx_swr_clk_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&tx_swr_data0_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&tx_swr_data1_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&tx_swr_data2_active {
+	config {
+		drive-strength = <2>;
+	};
+};
+
+&swr0 {
+	wsa884x_0220: wsa884x@02170220 {
+		//qcom,spkr-sd-n-node = <&wsa_spkr_en13>;
+		//sound-name-prefix = "SpkrLeft";
+		status = "disabled";
+	};
+
+	wsa884x_0221: wsa884x@02170221 {
+		status = "disabled";
+	};
+};
+
+
+&wcd9378_codec {
+	status = "disabled";
+};
+
+&wcd9378_rx_slave {
+	status = "disabled";
+};
+
+&wcd9378_tx_slave {
+	status = "disabled";
+};
+
+&wcd939x_tx_slave {
+	status = "okay";
+};
+
+&wcd939x_rx_slave {
+	status = "okay";
+};
+
+&wsa_macro {
+	status = "disabled";
+	qcom,wsa-bat-cfgs = <1>, <1>;
+};
+
+&swr_haptics {
+	status = "disabled";
+};
+
+&wcd939x_codec {
+	status = "okay";
+	/* 0 for digital crosstalk disabled,
+	 * 1 for digital crosstalk with local sensed a-xtalk enabled, and
+	 * 2 for digital crosstalk with remote sensed a-xtalk enabled.
+	 */
+	qcom,usbcss-hs-xtalk-config = <0>;
+	qcom,usbcss-hs-rdson = <600>;
+	qcom,usbcss-hs-r2 = <7550>;
+	qcom,usbcss-hs-r3 = <1>;
+	qcom,usbcss-hs-r4 = <330>;
+	qcom,usbcss-hs-r5 = <5>;
+	qcom,usbcss-hs-r6 = <1>;
+	qcom,usbcss-hs-r7 = <5>;
+	qcom,usbcss-hs-lin-k-aud = <13>;
+	qcom,usbcss-hs-lin-k-gnd = <13>;
+};
+
+&cdc_dmic01_gpios {
+	status = "disabled";
+};
+
+&cdc_dmic23_gpios {
+	status = "disabled";
+};
+
+&cdc_pri_mi2s_gpios {
+	status = "disabled";
+};
+
+&fm_i2s1_gpios {
+	status = "disabled";
+};
+
+&cdc_quat_mi2s_gpios {
+	status = "disabled";
+};
+
+&cdc_quin_mi2s_gpios {
+	status = "disabled";
+};
+
+&cdc_sen_mi2s_gpios {
+	status = "disabled";
+};
+
+&cdc_sep_mi2s_gpios {
+	status = "disabled";
+};
+
+&cdc_sec_mi2s_gpios {
+	status = "okay";
+};
+
+&qupv3_se5_i2c {
+	status = "okay";
+	tfa98xx@34 {
+		compatible = "tfa,tfa98xx";
+		reg = <0x34>;
+		reset-gpio = <&tlmm 2 0>;	//AUDIO_REC_PA_RST
+		rcvspk-gpio = <&tlmm 116 0>;	//Spk work Pull up Rcv work Pull down
+		reset-polarity=<0>; // 一般配置为 1,TFA9865 配置为 0 (0：active low reset input， 1：active High reset input)
+	};
+	tfa98xx@35 {
+		compatible = "tfa,tfa98xx";
+		reg = <0x35>;
+		reset-gpio = <&tlmm 69 0>;	//AUDIO_SPK_PA_RST
+		reset-polarity=<0>; // 一般配置为 1,TFA9865 配置为 0 (0：active low reset input， 1：active High reset input)
+	};
+};
+
+
+&tuna_snd {
+	qcom,model = "tuna-qrd-snd-card";
+	swr-haptics-unsupported;
+	qcom,audio-routing =
+		"AMIC1", "Analog Mic1",
+		"AMIC1", "MIC BIAS1",
+		"AMIC2", "Analog Mic2",
+		"AMIC2", "MIC BIAS2",
+		"AMIC3", "Analog Mic3",
+		"AMIC3", "MIC BIAS3",
+		"AMIC4", "Analog Mic4",
+		"AMIC4", "MIC BIAS4",
+		"AMIC5", "Analog Mic5",
+		"AMIC5", "MIC BIAS4",
+		"VA AMIC1", "Analog Mic1",
+		"VA AMIC1", "VA MIC BIAS1",
+		"VA AMIC2", "Analog Mic2",
+		"VA AMIC2", "VA MIC BIAS2",
+		"VA AMIC3", "Analog Mic3",
+		"VA AMIC3", "VA MIC BIAS3",
+		"VA AMIC4", "Analog Mic4",
+		"VA AMIC4", "VA MIC BIAS4",
+		"VA AMIC5", "Analog Mic5",
+		"VA AMIC5", "VA MIC BIAS4",
+		"IN1_HPHL", "HPHL_OUT",
+		"IN2_HPHR", "HPHR_OUT",
+		"IN3_EAR", "AUX_OUT",
+		#if 0
+		"HAP_IN", "PCM_OUT",
+		"WSA SRC0_INP", "SRC0",
+		"WSA_TX DEC0_INP", "TX DEC0 MUX",
+		"WSA_TX DEC1_INP", "TX DEC1 MUX",
+		#endif
+		"RX_TX DEC0_INP", "TX DEC0 MUX",
+		"RX_TX DEC1_INP", "TX DEC1 MUX",
+		"RX_TX DEC2_INP", "TX DEC2 MUX",
+		"RX_TX DEC3_INP", "TX DEC3 MUX",
+		//"SpkrRight IN", "WSA_SPK2 OUT",
+		"TX SWR_INPUT", "WCD_TX_OUTPUT",
+		"VA SWR_INPUT", "VA_SWR_CLK",
+		"VA SWR_INPUT", "WCD_TX_OUTPUT",
+		"VA_AIF1 CAP", "VA_SWR_CLK",
+		"VA_AIF2 CAP", "VA_SWR_CLK",
+		"VA_AIF3 CAP", "VA_SWR_CLK";
+	asoc-codec  = <&stub_codec>, <&lpass_cdc>, <&swr_haptics>,
+			<&wcd939x_codec>;
+	asoc-codec-names = "msm-stub-codec.1", "lpass-cdc","swr-haptics",
+			"wcd939x_codec";
+	qcom,ext-disp-audio-rx = <1>;
+	qcom,wsa-max-devs = <0>;
+	qcom,wcd-disable-legacy-surge;
+	wcd939x-i2c-handle = <&wcd_usbss>;
+	qcom,msm-mbhc-usbc-audio-supported = <1>;
+	qcom,msm-mbhc-hphl-swh = <0>;
+	qcom,msm-mbhc-gnd-swh = <0>;
+	qcom,msm-mbhc-hs-mic-max-threshold-mv = <2520>;
+	qcom,mi2s-audio-intf = <1>;
+	qcom,sec-mi2s-gpios = <&cdc_sec_mi2s_gpios>;
+};
+
+

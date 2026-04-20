@@ -1,0 +1,377 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+#include <dt-bindings/gpio/gpio.h>
+
+&sdhc_2 {
+	vdd-supply = <&L13B>;
+	qcom,vdd-voltage-level = <2960000 2960000>;
+	qcom,vdd-current-level = <0 976270>;
+
+	vdd-io-supply = <&L23B>;
+	qcom,vdd-io-voltage-level = <1800000 2960000>;
+	qcom,vdd-io-current-level = <0 5830>;
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on>;
+	pinctrl-1 = <&sdc2_off>;
+
+	cd-gpios = <&tlmm 87 GPIO_ACTIVE_HIGH>;
+
+	qcom,uses_level_shifter;
+
+	status = "disabled";
+};
+
+&tlmm {
+	cable_gpio_default: cable_gpio_default {
+		mux {
+			pins = "gpio145","gpio149";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio145","gpio149";
+			bias-pull-up;
+			input-enable;
+		};
+	};
+};
+&soc {
+	cable_gpioi: cable_gpio {
+		compatible = "gpio,cable_state";
+		cable-gpio-ant0 = <&tlmm 145 0>;
+		cable-gpio-ant2 = <&tlmm 149 0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&cable_gpio_default>;
+		status = "okay";
+	};
+};
+
+&tlmm {
+	ics_haptic_rst_pinctrl: ics_haptic_rst_pinctrl {
+		mux {
+			pins = "gpio30";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio30";
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+		};
+	};
+	ics_haptic_irq_pinctrl: ics_haptic_irq_pinctrl {
+		mux {
+			pins = "gpio116";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio116";
+			bias-pull-up;
+			input-enable;
+			drive-open-drain;
+			//power-source = <0>;
+		};
+	};
+};
+&qupv3_se2_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	qcom,clk-freq-out = <1000000>;
+	status = "ok";
+	ics_haptic_top: ics_haptic@5f {
+		compatible = "ics,haptic_rt";
+		reg = <0x5f>;
+		device-name = "vibrator_nt";
+		richtap-name = "aw86927_haptic";
+		pinctrl-names = "default";
+		pinctrl-0 = <&ics_haptic_rst_pinctrl &ics_haptic_irq_pinctrl>;
+		reset-gpio = <&tlmm 30 0>;
+		irq-gpio = <&tlmm 116 0>;
+		// rt6010 chip configuration
+		rt6010_chip_id = <0x6B>;
+		rt6010_reg_size = <0x6C>;
+		rt6010_ram_size = <0x600>;
+		rt6010_sys_f0 = <1700>;
+		rt6010_list_base_addr = <0x400>;
+		rt6010_wave_base_addr = <0x420>;
+		rt6010_fifo_ae = <0x200>;
+		rt6010_fifo_af = <0x300>;
+		rt6010_boost_mode = <0x00>;
+		rt6010_boost_vol = <0x0A>;
+		rt6010_gain = <0x80>;
+		rt6010_brake_en = <0>;
+		rt6010_brake_wave_no = <0>;
+		rt6010_brake_const = <0>;
+		rt6010_brake_acq_point = <0>;
+		status = "ok";
+	};
+};
+
+&qupv3_se0_i2c {
+	status = "ok";
+	fsa4480: fsa4480@42 {
+		compatible = "qcom,fsa4480-i2c";
+		reg = <0x42>;
+	};
+};
+
+&qupv3_se0_i2c {
+	status = "ok";
+	qcom,clk-freq-out = <400000>;
+	aw20144_led@20 {
+		compatible = "awinic,aw20144_led";
+		reg = <0x20>;
+		enable-gpio = <&pmxr2230_gpios 8 GPIO_ACTIVE_LOW>;
+		aw20144,imax = <13>;
+		aw20144,sl_current = <255>;
+		aw20144,max_brightness = <255>;
+		aw20144,effect-bin;
+
+		status = "okay";
+	};
+};
+
+&qupv3_se0_i2c {
+	status = "ok";
+	qcom,clk-freq-out = <400000>;
+	aw20144_led@21 {
+		compatible = "awinic,aw20144_led";
+		reg = <0x21>;
+		enable-gpio = <&pmxr2230_gpios 8 GPIO_ACTIVE_LOW>;
+		aw20144,imax = <20>;
+		aw20144,sl_current = <255>;
+		aw20144,max_brightness = <255>;
+		aw20144,effect-bin;
+
+		status = "okay";
+	};
+};
+
+&qupv3_se8_spi {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	status = "ok";
+	qcom,touch-active = "focaltech,fts_ts";
+	qcom,la-vm;
+
+	focaltech_tp@0 {
+		compatible = "focaltech,fts_ts";
+		reg = <0>;
+		spi-max-frequency = <12000000>;
+		focaltech,vdd-name = "vdd";
+		vdd-supply = <&L22B>;
+		focaltech,iovcc-name = "iovcc";
+		iovcc-supply = <&L1G>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <13 0x2008>;
+
+		focaltech,display-coords = <0 0 1260 2800>;
+		focaltech,max-touch-number = <10>;
+
+		focaltech,reset-gpio = <&tlmm 16 0x0>;
+		focaltech,irq-gpio = <&tlmm 13 0x2008>;
+		status = "ok";
+	};
+};
+
+&pmic_glink_debug {
+	i2c@105 {
+		reg = <0x105>;  /* I2C instance 5 in ADSP for SE4 */
+		#address-cells = <1>;
+		#size-cells = <0>;
+		qcom,bus-type = "i2c";
+
+		qcom,smb1393@35 {
+			compatible = "qcom,i2c-pmic";
+			reg = <0x35>;
+			qcom,can-sleep;
+		};
+	};
+};
+
+&pmic_glink_adc {
+	status = "ok";
+
+	smb1393_1_iin {
+		reg = <0x1053501>;
+		label = "smb1393_1_iin";
+	};
+
+	smb1393_1_ichg {
+		reg = <0x1053502>;
+		label = "smb1393_1_ichg";
+	};
+
+	smb1393_1_die_temp {
+		reg = <0x1053503>;
+		label = "smb1393_1_die_temp";
+	};
+};
+
+&pmxr2230_sys_therm_11 {
+	status = "disabled";
+};
+
+&sys_therm_11 {
+	status = "disabled";
+};
+
+&pm8550ve_f_die_temp {
+	status = "disabled";
+};
+
+&qupv3_se4_i2c {
+	status = "ok";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+	redriver: redriver@1c {
+		compatible = "onnn,redriver";
+		reg = <0x1c>;
+
+		vdd-supply = <&L7B>;
+
+		lane-channel-swap;
+
+		eq = /bits/ 8 <
+				/* Parameters for USB */
+				0x4 0x4 0x4 0x4
+				/* Parameters for DP */
+				0x5 0x7 0x7 0x5>;
+		flat-gain = /bits/ 8 <
+				/* Parameters for USB */
+				0x3 0x1 0x1 0x3
+				/* Parameters for DP */
+				0x0 0x3 0x3 0x0>;
+		output-comp = /bits/ 8 <
+				/* Parameters for USB */
+				0x3 0x3 0x3 0x3
+				/* Parameters for DP */
+				0x3 0x3 0x3 0x3>;
+		loss-match = /bits/ 8 <
+				/* Parameters for USB */
+				0x1 0x3 0x3 0x1
+				/* Parameters for DP */
+				0x3 0x3 0x3 0x3>;
+		status = "disabled";
+	};
+};
+
+&usb_qmp_dp_phy {
+	pinctrl-names = "unused";
+};
+
+&usb0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb3phy_portselect_gpio>;
+	gpios = <&tlmm 122 0>;
+
+	ssusb_redriver = <&redriver>;
+
+};
+
+&battery_charger {
+	chg_data_id = <9>;
+	nt_low-power-off-soc0-vbat = <3300>;
+};
+
+/*
+&regulator_ocp_notifier {
+	periph-1c1-supply = <&L1B>;
+	periph-1c2-supply = <&L2B>;
+	periph-1c3-supply = <&L3B_LEVEL>;
+	periph-1c4-supply = <&L4B>;
+	periph-1c5-supply = <&L5B>;
+	periph-1c6-supply = <&L6B>;
+	periph-1c7-supply = <&L7B>;
+	periph-1c8-supply = <&L8B>;
+	periph-1c9-supply = <&L9B>;
+	periph-1ca-supply = <&L10B>;
+	periph-1cb-supply = <&L11B>;
+	periph-1cc-supply = <&L12B>;
+	periph-1cd-supply = <&L13B>;
+	periph-1ce-supply = <&L14B>;
+	periph-1cf-supply = <&L15B>;
+	periph-1d0-supply = <&L16B>;
+	periph-1d1-supply = <&L17B>;
+	periph-1d2-supply = <&L18B>;
+	periph-1d3-supply = <&L19B>;
+	periph-1d4-supply = <&L20B>;
+	periph-1d5-supply = <&L21B>;
+	periph-1d6-supply = <&L22B>;
+	periph-1d7-supply = <&L23B>;
+	periph-19b-supply = <&S1B>;
+	periph-19e-supply = <&S2B>;
+	periph-1a1-supply = <&S3B>;
+	periph-1a2-supply = <&S4B>;
+	periph-1e4-supply = <&BOB>;
+	periph-3c1-supply = <&L1D>;
+	periph-3c2-supply = <&L2D>;
+	periph-3c3-supply = <&L3D_LEVEL>;
+	periph-39b-supply = <&S1D_LEVEL>;
+	periph-3a1-supply = <&S3D_LEVEL>;
+	periph-3a2-supply = <&S4D_LEVEL>;
+	periph-3a3-supply = <&S5D_LEVEL>;
+	periph-6c1-supply = <&L1G>;
+	periph-6c2-supply = <&L2G>;
+	periph-6c3-supply = <&L3G>;
+	periph-c40-supply = <&L1M>;
+	periph-c41-supply = <&L2M>;
+	periph-c42-supply = <&L3M>;
+	periph-c43-supply = <&L4M>;
+	periph-c44-supply = <&L5M>;
+	periph-c45-supply = <&L6M>;
+	periph-c46-supply = <&L7M>;
+	periph-d40-supply = <&L1N>;
+	periph-d41-supply = <&L2N>;
+	periph-d42-supply = <&L3N>;
+	periph-d43-supply = <&L4N>;
+	periph-d44-supply = <&L5N>;
+	periph-d45-supply = <&L6N>;
+	periph-d46-supply = <&L7N>;
+};
+*/
+
+&tlmm {
+	hwid_gpio_default: hwid_gpio_default {
+		mux {
+			pins = "gpio179","gpio180","gpio181","gpio182","gpio184";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio179","gpio180","gpio181","gpio182","gpio184";
+			bias-disable;
+			input-enable;
+		};
+	};
+};
+&soc {
+	hwid_gpioi: hwid_gpio {
+		compatible = "gpio,board-id,FroggerPro";
+		board_id_gpio0 = <&tlmm 179 0>;
+		board_id_gpio1 = <&tlmm 180 0>;
+		board_id_gpio2 = <&tlmm 181 0>;
+		board_id_gpio3 = <&tlmm 182 0>;
+		board_id_gpio4 = <&tlmm 184 0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&hwid_gpio_default>;
+		status = "okay";
+	};
+};
+
+&soc {
+	bootloader_log {
+		compatible = "nothing,bootloader_log";
+		memory-region = <&uefi_log_mem>;
+	};
+	nothing_secure_element {
+		compatible = "nothing,secure_element";
+		// HWIO_OEM_SECURITY_POLICY_LSB_ADDR
+		oem_sec_boot_addr = <0x221c8cf0>;
+	};
+};
+
+#include "fingerprint.dtsi"

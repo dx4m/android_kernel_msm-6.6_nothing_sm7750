@@ -1,0 +1,130 @@
+/* Copyright (c) 2021 The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
+
+&qupv3_se8_i2c {
+	wl28681_j:wl28681@61 {
+		status = "okay";
+		compatible = "willsemi,wl28681";
+		reg =<0x61>;
+		reset-gpios = <&pm8550vs_d_gpios 6 GPIO_ACTIVE_LOW>;
+		irq-gpios = <&tlmm 145 GPIO_ACTIVE_HIGH>;
+		vin12 = <&S2B>;
+		vin34 = <&BOB>;
+		vin5 = <&BOB>;
+		vin6 = <&BOB>;
+		vin7 = <&BOB>;
+
+		regulators {
+			WL_L1N: WL_L1N {
+				regulator-min-microvolt = <1000000>;
+				regulator-max-microvolt = <2048000>;
+				// init-voltage = <1150000>;
+				regulator-name ="WL_L1N";
+			};
+			WL_L2N: WL_L2N {
+				regulator-min-microvolt = <1000000>;
+				regulator-max-microvolt = <2048000>;
+				// init-voltage = <1200000>;
+				regulator-name = "WL_L2N";
+			};
+			WL_L3N: WL_L3N {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <2804000>;
+				// init-voltage = <2804000>;
+				regulator-name = "WL_L3N";
+			};
+			WL_L4N: WL_L4N {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <2804000>;
+				// init-voltage = <2704000>;
+				regulator-name = "WL_L4N";
+			};
+			WL_L5N: WL_L5N {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <3300000>;
+				// init-voltage = <3300000>;
+				regulator-name = "WL_L5N";
+			};
+			WL_L6N: WL_L6N {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <2804000>;
+				// init-voltage = <2804000>;
+				regulator-name ="WL_L6N";
+			};
+			WL_L7N: WL_L7N {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <3300000>;
+				// init-voltage = <3300000>;
+				regulator-name = "WL_L7N";
+			};
+		};
+	};
+
+	wl28681:wl28681@35 {
+		status = "okay";
+		compatible = "willsemi,wl28681";
+		reg =<0x35>;
+		reset-gpios = <&pm8550vs_d_gpios 5 GPIO_ACTIVE_LOW>;
+		irq-gpios = <&tlmm 144 GPIO_ACTIVE_HIGH>;
+		vin12 = <&S2B>;
+		vin34 = <&BOB>;
+		vin5 = <&BOB>;
+		vin6 = <&BOB>;
+		vin7 = <&BOB>;
+
+		regulators {
+			WL_L1M: WL_L1M {
+				regulator-min-microvolt = <1000000>;
+				regulator-max-microvolt = <2048000>;
+				// init-voltage = <1050000>;
+				regulator-name ="WL_L1M";
+			};
+			WL_L2M: WL_L2M {
+				regulator-min-microvolt = <1000000>;
+				regulator-max-microvolt = <2048000>;
+				// init-voltage = <1100000>;
+				regulator-name = "WL_L2M";
+			};
+			WL_L3M: WL_L3M {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <2804000>;
+				// init-voltage = <2204000>;
+				regulator-name = "WL_L3M";
+			};
+			WL_L4M: WL_L4M {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <2804000>;
+				// init-voltage = <1804000>;
+				regulator-name = "WL_L4M";
+			};
+			WL_L5M: WL_L5M {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <3100000>;
+				// init-voltage = <3100000>;
+				regulator-name = "WL_L5M";
+			};
+			WL_L6M: WL_L6M {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <3004000>;
+				// init-voltage = <3004000>;
+				regulator-name ="WL_L6M";
+			};
+			WL_L7M: WL_L7M {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <2804000>;
+				// init-voltage = <2804000>;
+				regulator-name = "WL_L7M";
+			};
+		};
+	};
+};

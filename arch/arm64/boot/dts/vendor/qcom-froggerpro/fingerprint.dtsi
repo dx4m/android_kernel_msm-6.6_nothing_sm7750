@@ -1,0 +1,21 @@
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
+
+
+//&qupv3_se2_spi {
+//        status = "ok";
+//};
+
+&soc {
+        goodix_fp {
+                compatible = "goodix,fingerprint";
+                interrupt-parent = <&tlmm>;
+                vdd-supply = <&L23B>;
+                vdd-max-uv = <2960000>;
+                vdd-min-uv = <2960000>;
+                fp-gpio-irq = <&tlmm 79 0x00>;
+                fp-gpio-reset = <&tlmm 56 0x00>;
+                status = "ok";
+        };
+};
+

@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/qcom,aop-qmp.h>
+#include <dt-bindings/clock/qcom,gcc-kera.h>
+#include <dt-bindings/clock/qcom,gpucc-kera.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
+#include <dt-bindings/interconnect/qcom,kera.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+
+#include "kera-gpu.dtsi"
+#include "kera-gpu-pwrlevels.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Kera SoC";
+	compatible = "qcom,kera", "qcom,kerap";
+	qcom,msm-id = <0x293 0x10000>, <0x2ae 0x10000>,
+			<0x2db 0x10000>, <0x2dc 0x10000>,
+			<0x2d1 0x10000>, <0x2d0 0x10000>;
+	qcom,board-id = <0 0>;
+};

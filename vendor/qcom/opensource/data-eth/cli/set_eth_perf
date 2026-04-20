@@ -1,0 +1,58 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+
+set -e
+
+# Check that one interface is provided
+if [ $# -ne 1 ]; then
+	echo "Usage: $0 <interface>"
+	exit 1
+fi
+
+# Function to set SMP affinity for IRQs
+set_smp_affinity() {
+	local interface="$1"
+
+	# Assign CPU mask based on eth interface
+	if [ "$interface" == "eth0" ]; then
+		local cpu_mask=1
+	else
+		local cpu_mask=2
+	fi
+
+	# Get the IRQ of the eth interface
+	local irq=$(grep "$interface" /proc/interrupts | cut -d: -f1 | tr -d ' ')
+	if [ -z "$irq" ]; then
+		echo "Error: Could not find IRQ for $interface"
+		exit 1
+	fi
+
+	# Set IRQ affinity
+	echo -n "$cpu_mask" > /proc/irq/"$irq"/smp_affinity
+}
+
+# Function to change RPS CPUs settings
+set_rps_cpus() {
+	local interface="$1"
+
+	# Set RPS CPUs
+	echo c > /sys/class/net/"$interface"/queues/rx-1/rps_cpus
+}
+
+# Validate the driver
+if [ /sys/class/net/"$1"/device/driver -ef /sys/bus/platform/drivers/qcom-ethqos ]; then
+	# Validate the interface value
+	if [ "$1" = "eth0" ] || [ "$1" = "eth1" ]; then
+		# Set RPS CPUs setting and SMPaffinity for IRQs
+		set_smp_affinity $1
+		set_rps_cpus $1
+	else
+		echo "Error: Invalid interface. Only 'eth0' or 'eth1' are allowed."
+		exit 1
+	fi
+else
+	echo "Driver not supported"
+	exit 1
+fi
+

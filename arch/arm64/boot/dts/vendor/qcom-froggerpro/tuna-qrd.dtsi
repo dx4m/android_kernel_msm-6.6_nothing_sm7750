@@ -1,0 +1,586 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2024-2025, Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/iio/qcom,spmi-adc5-gen3-pmxr2230.h>
+
+&qupv3_se4_spi {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "ok";
+	qcom,touch-active = "focaltech,fts_ts";
+	qcom,la-vm;
+	focaltech_tp@0 {
+		compatible = "focaltech,fts_ts";
+		reg = <0>;
+		spi-max-frequency = <12000000>;
+		focaltech,vdd-name = "vdd";
+		vdd-supply = <&L22B>;
+		focaltech,iovcc-name = "iovcc";
+		iovcc-supply = <&L1D>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <176 0x2008>;
+
+		focaltech,display-coords = <0 0 1260 2800>;
+		focaltech,max-touch-number = <10>;
+
+		focaltech,reset-gpio = <&tlmm 189 0x0>;
+		focaltech,irq-gpio = <&tlmm 176 0x2008>;
+		focaltech,irq-flags = <2>; /* 1:trigger rising, 2:trigger falling; */
+		focaltech,panel-max-x = <1260>;
+		focaltech,panel-max-y = <2800>;
+		focaltech,panel-max-w = <255>;
+	};
+};
+
+&qupv3_se10_spi {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "ok";
+	matrix_leds:matrix_leds@0 {
+		compatible = "Nothing,matrix_leds_spi";
+		reg = <0x0>;
+		spi-max-frequency = <1000000>;
+		pinctrl-names = "matrix_leds_power_on", "matrix_leds_power_off";
+		pinctrl-0 = <&matrix_leds_ldo_enable>;
+		pinctrl-1 = <&matrix_leds_ldo_disable>;
+
+	};
+};
+
+&tlmm {
+       matrix_leds_ldo_enable: matrix_leds_ldo_enable {
+		mux{
+			pins = "gpio79";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio79";
+			bias-disable;
+			output-high;
+		};
+	};
+
+	matrix_leds_ldo_disable: matrix_leds_ldo_disable {
+		mux{
+			pins = "gpio79";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio79";
+			bias-disable;
+			output-low;
+		};
+	};
+
+};
+
+&ufsphy_mem {
+	compatible = "qcom,ufs-phy-qmp-v4-niobe";
+
+	/* VDDA_UFS_CORE */
+	vdda-phy-supply = <&L1F>;
+	vdda-phy-max-microamp = <213100>;
+	/*
+	 * Platforms supporting Gear 5 && Rate B require a different
+	 * voltage supply. Check the Power Grid document.
+	 */
+	vdda-phy-min-microvolt = <912000>;
+
+	/* VDDA_UFS_0_1P2 */
+	vdda-pll-supply = <&L4B>;
+	vdda-pll-max-microamp = <18340>;
+
+	/* Phy GDSC for VDD_MX, always on */
+	vdd-phy-gdsc-supply = <&gcc_ufs_mem_phy_gdsc>;
+
+	/* Qref power supply, Refer Qref diagram */
+	vdda-qref-supply = <&L2B>;
+	vdda-qref-max-microamp = <64500>;
+
+	status = "ok";
+};
+
+&ufshc_mem {
+	vdd-hba-supply = <&gcc_ufs_phy_gdsc>;
+
+	vcc-supply = <&L12B>;
+	vcc-max-microamp = <1200000>;
+
+	vccq-supply = <&L3F>;
+	vccq-max-microamp = <1200000>;
+
+	qcom,vccq-proxy-vote-supply = <&L3F>;
+	qcom,vccq-proxy-vote-max-microamp = <1200000>;
+
+	/* VDD_PX10 is voted for the ufs_reset_n */
+	qcom,vddp-ref-clk-supply = <&L5B>;
+	qcom,vddp-ref-clk-max-microamp = <100>;
+
+	qcom,vccq-parent-supply = <&S2B>;
+	qcom,vccq-parent-max-microamp = <210000>;
+
+	status = "ok";
+};
+
+&wcd_usbss {
+	interrupt-parent = <&spmi_bus>;
+	interrupts = <0x0 0xb6 0x1 IRQ_TYPE_EDGE_BOTH>;
+	interrupt-names = "usb_wcd";
+	nvmem-cells = <&usb_mode>;
+	nvmem-cell-names = "usb_mode";
+};
+
+&sdhc_2 {
+	vdd-supply = <&L13B>;
+	qcom,vdd-voltage-level = <2960000 2960000>;
+	qcom,vdd-current-level = <0 976310>;
+
+	vdd-io-supply = <&L23B>;
+	qcom,vdd-io-voltage-level = <1800000 2960000>;
+	qcom,vdd-io-current-level = <0 5830>;
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on>;
+	pinctrl-1 = <&sdc2_off>;
+
+	cd-gpios = <&tlmm 39 GPIO_ACTIVE_LOW>;
+
+	qcom,uses_level_shifter;
+	status = "disabled";
+};
+
+&thermal_zones {
+	/delete-node/ sys-therm-11;
+};
+
+/***************** aw9380x_cap Driver ****************/
+&qupv3_se8_i2c {
+	status = "ok";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <400000>; // Set I2C frequency to 400kHz
+	aw9380x_cap@12 {
+		compatible = "awinic,aw9380x_cap";
+		avdd-supply = <&L13B>;
+		aw_cap,regulator-power-supply;
+		reg = <0x12>;                       // I2C slave address, 7bit
+		interrupt-parent = <&tlmm>;
+		interrupts = <127 0x2008>;		// interrupt gpio config
+		irq-gpio = <&tlmm 127 0x2008>;		// interrupt gpio config
+		channel_use_flag = <0x1fff>;		// channel setting
+		cap-num = < 0 >;			// devices number , fix 0
+		status = "ok";
+	};
+};
+
+&qupv3_se5_i2c {
+	status = "ok";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+	redriver: redriver@1c {
+		compatible = "onnn,redriver";
+		reg = <0x1c>;
+
+		vdd-supply = <&L7B>;
+
+		lane-channel-swap;
+
+		eq = /bits/ 8 <
+				/* Parameters for USB */
+				0x4 0x4 0x4 0x4
+				/* Parameters for DP */
+				0x5 0x7 0x7 0x5>;
+		flat-gain = /bits/ 8 <
+				/* Parameters for USB */
+				0x3 0x1 0x1 0x3
+				/* Parameters for DP */
+				0x0 0x3 0x3 0x0>;
+		output-comp = /bits/ 8 <
+				/* Parameters for USB */
+				0x3 0x3 0x3 0x3
+				/* Parameters for DP */
+				0x3 0x3 0x3 0x3>;
+		loss-match = /bits/ 8 <
+				/* Parameters for USB */
+				0x1 0x3 0x3 0x1
+				/* Parameters for DP */
+				0x3 0x3 0x3 0x3>;
+	};
+};
+
+&usb_qmp_dp_phy {
+	pinctrl-names = "unused";
+};
+
+&usb0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb3phy_portselect_gpio>;
+	gpios = <&tlmm 122 0>;
+
+	ssusb_redriver = <&redriver>;
+
+	qcom,wcd_usbss = <&wcd_usbss>;
+
+};
+
+/***************** AWINIC High Voltage Haptic Driver ****************/
+&qupv3_se15_i2c {
+	status = "ok";
+	qcom,clk-freq-out = <1000000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	haptic_hv@5A{
+		compatible = "awinic,haptic_hv";
+		reg = <0x5A>;
+		irq-gpio = <&tlmm 175 0>;
+		reset-gpio = <&tlmm 128 0>;
+		pinctrl-names = "irq_active";
+		pinctrl-0 = < &gpio175_input_pull_up >;
+		f0_pre = < 1700 >;
+		f0_cali_percent = /bits/ 8 < 7 >;
+		mode = /bits/ 8 < 5 >;
+
+/****************************** aw869x ******************************/
+		aw869x_f0_cali_percent = /bits/ 8 < 7 >;
+		aw869x_cont_drv_lev = /bits/ 8 < 105 >;
+		aw869x_cont_drv_lvl_ov = /bits/ 8 < 125 >;
+		aw869x_cont_td = < 0x009A >;
+		aw869x_cont_zc_thr = < 0x0FF1 >;
+		aw869x_cont_num_brk = /bits/ 8 < 3 >;
+		aw869x_f0_coeff = < 260 >; /* Don't modify it 2.604167 */
+		aw869x_duration_time = /bits/ 8 < 20 30 60 >;
+		aw869x_f0_trace_parameter = /bits/ 8 < 0x05 0x03 0x02 0x0F >;
+		aw869x_bemf_config = /bits/ 8 < 0x10 0x08 0x03 0xF8 >;
+		aw869x_tset = /bits/ 8 < 0x12 >;
+		aw869x_r_spare = /bits/ 8 < 0x68 >;
+		aw869x_bstdbg = /bits/ 8 < 0x30 0xEB 0xD4 0 0 0 >;
+		aw869x_trig_config = /bits/ 8 < 0 1 1 1 2 0 1 1 1 2 0 1 1 1 2 >;
+		aw869x_bst_vol_default = < 8500 >;
+
+/***************************** aw869xx ******************************/
+		aw869xx_f0_cali_percent = /bits/ 8 < 7 >;
+		aw869xx_gain_bypass = /bits/ 8 < 1 >;
+		aw869xx_cont_drv1_lvl = /bits/ 8 < 0x7F >;
+		aw869xx_cont_lra_vrms = < 1000 >; /* Motor rated voltage, mV */
+		aw869xx_cont_brk_time = /bits/ 8 < 0x08 >;
+		aw869xx_cont_track_margin = /bits/ 8 < 0x0F >;
+		aw869xx_cont_brk_gain = /bits/ 8 < 0x08 >;
+		aw869xx_cont_drv1_time = /bits/ 8 < 0x04 >;
+		aw869xx_cont_drv2_time = /bits/ 8 < 0x14 >;
+		aw869xx_duration_time = /bits/ 8 < 20 30 60 >;
+		aw869xx_d2s_gain = /bits/ 8 < 0x04 >;
+		aw869xx_bstcfg = /bits/ 8 < 0x20 0x24 0x96 0x40 0x11 >;
+		aw869xx_trig_config = /bits/ 8 < 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0 >;
+		aw869xx_bst_vol_default = < 8500 >;
+		aw869xx_is_enabled_track_en;
+		/* aw869xx_is_enabled_auto_bst; */
+		/* aw869xx_is_enabled_i2s; */
+		/* aw869xx_is_enabled_one_wire; */
+
+/***************************** aw8671x ******************************/
+		aw8671x_f0_cali_percent = /bits/ 8 < 7 >;
+		aw8671x_gain_bypass = /bits/ 8 < 1 >;
+		aw8671x_cont_drv1_lvl = /bits/ 8 < 0x7F >;
+		aw8671x_cont_lra_vrms = < 1000 >; /* Motor rated voltage, mV. If use 0812, 0512, 0412 or 0825, please select ram get f0 */
+		aw8671x_cont_brk_time = /bits/ 8 < 0x08 >;
+		aw8671x_cont_track_margin = /bits/ 8 < 0x0F >;
+		aw8671x_cont_brk_gain = /bits/ 8 < 0x08 >;
+		aw8671x_cont_drv1_time = /bits/ 8 < 0x04 >;
+		aw8671x_cont_drv2_time = /bits/ 8 < 0x14 >;
+		aw8671x_duration_time = /bits/ 8 < 20 30 60 >;
+		aw8671x_d2s_gain = /bits/ 8 < 0x04 >;
+		aw8671x_trig_config = /bits/ 8 < 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0 >;
+		aw8671x_bst_vol_default = < 6336 >;
+		aw8671x_is_enabled_track_en;
+		/* aw8671x_is_enabled_auto_bst; */
+		/* aw8671x_is_enabled_i2s; */
+		/* aw8671x_is_enabled_one_wire; */
+
+/***************************** aw8672x ******************************/
+		aw8672x_f0_cali_percent = /bits/ 8 < 15 >;
+		aw8672x_gain_bypass = /bits/ 8 < 1 >;
+		aw8672x_uvlo_vol_default = /bits/ 8 < 0 >;
+		aw8672x_cont_smart_loop = /bits/ 8 < 0 >;
+		aw8672x_cont_drv1_lvl = /bits/ 8 < 0x7F >;
+		aw8672x_cont_lra_vrms = < 1000 >;
+		aw8672x_cont_brk_time = /bits/ 8 < 0x08 >;
+		aw8672x_cont_track_margin = /bits/ 8 < 0x0F >;
+		aw8672x_cont_brk_gain = /bits/ 8 < 0x08 >;
+		aw8672x_cont_drv1_time = /bits/ 8 < 0x04 >;
+		aw8672x_cont_drv2_time = /bits/ 8 < 0x14 >;
+		aw8672x_duration_time = /bits/ 8 < 20 30 60 >;
+		aw8672x_d2s_gain = /bits/ 8 < 0x04 >;
+		aw8672x_trig_config = /bits/ 8 < 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0 >;
+		aw8672x_bst_vol_default = < 6336 >;
+		aw8672x_is_enabled_track_en;
+		/* aw8672x_is_enabled_auto_bst; */
+		/* aw8672x_is_enabled_one_wire; */
+
+/***************************** aw8692x ******************************/
+		aw8692x_f0_cali_percent = /bits/ 8 < 7 >;
+		aw8692x_gain_bypass = /bits/ 8 < 1 >;
+		aw8692x_cont_drv1_lvl = /bits/ 8 < 0x7F >;
+		aw8692x_cont_lra_vrms = < 1000 >; /* Motor rated voltage, mV. If use 0812, 0512, 0412 or 0825, please select ram get f0 */
+		aw8692x_cont_drv1_time = /bits/ 8 < 0x04 >;
+		aw8692x_cont_drv2_time = /bits/ 8 < 0x14 >;
+		aw8692x_cont_track_margin = /bits/ 8 < 0x0F >;
+		aw8692x_cont_brk_gain = /bits/ 8 < 0x08 >;
+		aw8692x_cont_brk_time = /bits/ 8 < 0x08 >;
+		aw8692x_duration_time = /bits/ 8 < 20 30 60 >;
+		aw8692x_d2s_gain = /bits/ 8 < 0x04 >;
+		aw8692x_trig_config = /bits/ 8 < 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0 >;
+		aw8692x_bst_vol_default = < 9000 >;
+		aw8692x_is_enabled_track_en;
+		/* aw8692x_is_enabled_auto_bst; */
+		/* aw8692x_is_enabled_one_wire; */
+
+/***************************** aw8693x ******************************/
+		aw8693x_f0_cali_percent = /bits/ 8 < 15 >;
+		aw8693x_gain_bypass = /bits/ 8 < 1 >;
+		aw8693x_uvlo_vol_default = /bits/ 8 < 0 >;
+		aw8693x_cont_smart_loop = /bits/ 8 < 0 >;
+		aw8693x_cont_drv1_lvl = /bits/ 8 < 0x7F >;
+		aw8693x_cont_drv2_lvl = /bits/ 8 < 0x48 >;//vibrator RMS 1.5v
+		aw8693x_cont_drv_width = /bits/ 8 <0x6A>;
+		aw8693x_cont_lra_vrms = < 1500 >;//vibrator vol 1.5v
+		aw8693x_cont_drv1_time = /bits/ 8 < 0x04 >;
+		aw8693x_cont_drv2_time = /bits/ 8 < 0x32 >;
+		aw8693x_cont_track_margin = /bits/ 8 < 0x0F >;
+		aw8693x_cont_brk_gain = /bits/ 8 < 0x0A >;
+		aw8693x_cont_brk_time = /bits/ 8 < 0x05 >;
+		aw8693x_duration_time = /bits/ 8 < 20 30 60 >;
+		aw8693x_d2s_gain = /bits/ 8 < 0x04 >;
+		aw8693x_algo_d2s_gain = /bits/ 8 < 0x02 >;
+		aw8693x_trig_config = /bits/ 8 < 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0 >;
+		aw8693x_bst_vol_default = < 8500 >;
+		aw8693x_is_enabled_track_en;
+		/* aw8693x_is_enabled_auto_bst; */
+		/* aw8693x_is_enabled_one_wire; */
+
+/***************************** aw8693xs ******************************/
+		aw8693xs_f0_cali_percent = /bits/ 8 < 10 >;
+		aw8693xs_gain_bypass = /bits/ 8 < 1 >;
+		aw8693xs_uvlo_vol_default = /bits/ 8 < 4 >;
+		aw8693xs_cont_drv1_lvl = /bits/ 8 < 0x7F >;
+		aw8693xs_cont_lra_vrms = < 1000 >;
+		aw8693xs_cont_drv1_time = /bits/ 8 < 0x04 >;
+		aw8693xs_cont_drv2_time = /bits/ 8 < 0x14 >;
+		aw8693xs_cont_track_margin = /bits/ 8 < 0x0F >;
+		aw8693xs_cont_brk_gain = /bits/ 8 < 0x08 >;
+		aw8693xs_cont_brk_time = /bits/ 8 < 0x08 >;
+		aw8693xs_duration_time = /bits/ 8 < 20 30 60 >;
+		aw8693xs_d2s_gain = /bits/ 8 < 0x04 >;
+		aw8693xs_bemf_d2s_gain = /bits/ 8 < 0x04 >;
+		aw8693xs_trig_config = /bits/ 8 < 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0
+						 0 0 0 1 0 2 0 0 >;
+		aw8693xs_bst_vol_default = < 8500 >;
+		aw8693xs_is_enabled_track_en;
+		aw8693xs_is_enabled_low_power;
+		/* aw8693xs_is_enabled_vbat_pro; */
+		/* aw8693xs_is_enabled_inter_brake; */
+		/* aw8693xs_is_enabled_auto_bst; */
+		/* aw8693xs_is_enabled_one_wire; */
+	};
+};
+
+&tlmm {
+	gpio175_input_pull_up: gpio175_input_pull_up {
+		mux {
+			 pins = "gpio175";
+			 function = "gpio";
+		};
+
+		config {
+			pins = "gpio175";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+	/* reset pin */
+	gpio128_reset_active: gpio128_reset_active {
+		mux {
+			pins = "gpio128";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio128";
+			drive-strength = <8>;   /* 8 mA */
+			output-high;
+		};
+	};
+
+	gpio128_reset_sleep: gpio128_reset_sleep {
+		mux {
+			pins = "gpio128";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio128";
+			drive-strength = <8>;   /* 8 mA */
+			bias-disable;
+			output-low;
+		};
+	};
+};
+/************************** AWINIC END *****************************/
+&qupv3_se2_spi {
+	status = "ok";
+};
+&soc {
+	goodix_fp {
+		compatible = "goodix,fingerprint";
+		interrupt-parent = <&tlmm>;
+		vdd-supply = <&L23B>;
+		vdd-max-uv = <3000000>;
+		vdd-min-uv = <3000000>;
+		fp-gpio-irq = <&tlmm 131 0x00>;
+		fp-gpio-reset = <&tlmm 129 0x00>;
+		status = "ok";
+	};
+	ois_regulator {
+		compatible = "vendor,ois_regulator";
+		cam_main_enable_gpio = <&tlmm 184 0x00>;
+		cam_sub_enable_gpio = <&tlmm 183 0x00>;
+
+		//cam_main_custom1_vdd-supply = <&L7B>;
+		cam_main_custom_vdd-supply = <&WL_L7N>;
+		cam_main_vdd-min-uv = <3200000>;
+		cam_main_vdd-max-uv = <3300000>;
+
+		//cam_sub_custom1_vdd-supply = <&L11B>;
+		cam_sub_custom_vdd-supply = <&WL_L6M>;
+
+		cam_sub_vdd-min-uv = <2800000>;
+		cam_sub_vdd-max-uv = <2900000>;
+		status = "ok";
+	};
+};
+
+&tlmm {
+	/* RF cable detect start */
+	cable_det_pin_default: cable_det_pin_default {
+		mux {
+			 pins = "gpio130", "gpio135", "gpio39";
+			 function = "gpio";
+		};
+
+		config {
+			pins = "gpio130", "gpio135", "gpio39";
+			bias-pull-up;
+			input-enable;
+		};
+	};
+};
+
+&pmxr2230_gpios {
+	/* 'NC' the PMIC side pin as HW suggested */
+	uimx_present_pmic_io_default {
+		uim1_present_nc_default: uim1_present_nc_default {
+			pins = "gpio11";
+			bias-high-impedance;
+		};
+	};
+};
+
+&soc {
+	cable_detect {
+		pinctrl-names = "default";
+		pinctrl-0 = <&cable_det_pin_default>;
+
+		compatible = "noth,cable_detect";
+		ant0_present-gpios = <&tlmm 130 GPIO_ACTIVE_LOW>;
+		ant2_present-gpios = <&tlmm 135 GPIO_ACTIVE_LOW>;
+		ant8_present-gpios = <&tlmm  39 GPIO_ACTIVE_LOW>;
+		status = "okay";
+	};
+
+	slot_check {
+		pinctrl-names = "default";
+		/* 'NC' the PMIC side pin as HW suggested */
+		pinctrl-0 = <&uim1_present_nc_default>;
+
+		compatible = "noth,slot_check";
+		usim0_present-gpios = <&tlmm 87 GPIO_ACTIVE_HIGH>;
+		usim1_present-gpios = <&tlmm 91 GPIO_ACTIVE_HIGH>;
+
+		status = "okay";
+	};
+};
+&regulator_ocp_notifier {
+	periph-1c1-supply = <&L1B>;
+	periph-1c2-supply = <&L2B>;
+	periph-1c3-supply = <&L3B>;
+	periph-1c4-supply = <&L4B>;
+	periph-1c5-supply = <&L5B>;
+	periph-1c6-supply = <&L6B>;
+	periph-1c7-supply = <&L7B>;
+	periph-1c8-supply = <&L8B>;
+	periph-1c9-supply = <&L9B>;
+	periph-1ca-supply = <&L10B>;
+	periph-1cb-supply = <&L11B>;
+	periph-1cc-supply = <&L12B>;
+	periph-1cd-supply = <&L13B>;
+	periph-1ce-supply = <&L14B>;
+	periph-1cf-supply = <&L15B>;
+	periph-1d0-supply = <&L16B>;
+	periph-1d1-supply = <&L17B>;
+	periph-1d2-supply = <&L18B>;
+	periph-1d3-supply = <&L19B>;
+	periph-1d4-supply = <&L20B>;
+	periph-1d5-supply = <&L21B>;
+	periph-1d6-supply = <&L22B>;
+	periph-1d7-supply = <&L23B>;
+	periph-19b-supply = <&S1B>;
+	periph-19e-supply = <&S2B>;
+	periph-1a1-supply = <&S3B>;
+	periph-1e4-supply = <&BOB>;
+	periph-3c1-supply = <&L1D>;
+	periph-3c2-supply = <&L2D_LEVEL>;
+	periph-3c3-supply = <&L3D>;
+	periph-59b-supply = <&S1F_LEVEL>;
+	periph-5a0-supply = <&S2F_LEVEL>;
+	periph-5a8-supply = <&S4F>;
+	periph-5a9-supply = <&S5F_LEVEL>;
+	periph-5ac-supply = <&S8F_LEVEL>;
+	periph-5c1-supply = <&L1F>;
+	periph-5c2-supply = <&L2F_LEVEL>;
+	periph-5c3-supply = <&L3F>;
+	periph-6c1-supply = <&L1G>;
+	periph-6c2-supply = <&L2G>;
+	periph-6c3-supply = <&L3G>;
+	periph-c40-supply = <&L1M>;
+	periph-c41-supply = <&L2M>;
+	periph-c42-supply = <&L3M>;
+	periph-c43-supply = <&L4M>;
+	periph-c44-supply = <&L5M>;
+	periph-c45-supply = <&L6M>;
+	periph-c46-supply = <&L7M>;
+	periph-d40-supply = <&L1N>;
+	periph-d41-supply = <&L2N>;
+	periph-d42-supply = <&L3N>;
+	periph-d43-supply = <&L4N>;
+	periph-d44-supply = <&L5N>;
+	periph-d45-supply = <&L6N>;
+	periph-d46-supply = <&L7N>;
+};
