@@ -3,6 +3,8 @@ load(":msm_kernel_16k_la.bzl", "define_msm_16k_la")
 load(":msm_kernel_la.bzl", "define_msm_la")
 load(":target_variants.bzl", "la_variants")
 
+load("@nt_project//:dict.bzl", "TARGET_PRODUCT")
+
 target_name = "sun"
 
 def define_sun():
@@ -113,10 +115,14 @@ def define_sun():
         "drivers/mfd/qcom-i2c-pmic.ko",
         "drivers/mfd/qcom-spmi-pmic.ko",
         "drivers/misc/qseecom_proxy.ko",
+        "drivers/misc/cable_detect.ko",
+        "drivers/misc/slot_check.ko",
+        "drivers/misc/secure_state.ko",
         "drivers/mmc/host/cqhci.ko",
         "drivers/mmc/host/sdhci-msm.ko",
         "drivers/nvmem/nvmem_qcom-spmi-sdam.ko",
         "drivers/nvmem/nvmem_qfprom.ko",
+        "drivers/nothing_thermal/nothing_virtual_ntc.ko",
         "drivers/pci/controller/pci-msm-drv.ko",
         "drivers/perf/qcom_llcc_pmu.ko",
         "drivers/phy/qualcomm/phy-qcom-ufs.ko",
@@ -136,6 +142,7 @@ def define_sun():
         "drivers/power/supply/qti_battery_charger.ko",
         "drivers/regulator/debug-regulator.ko",
         "drivers/regulator/proxy-consumer.ko",
+        "drivers/regulator/wl28681-regulator.ko",
         "drivers/regulator/qcom-amoled-regulator.ko",
         "drivers/regulator/qti-fixed-regulator.ko",
         "drivers/regulator/qti-ocp-notifier.ko",
@@ -241,6 +248,7 @@ def define_sun():
         "drivers/soc/qcom/sys_pm_vx.ko",
         "drivers/soc/qcom/sysmon_subsystem_stats.ko",
         "drivers/soc/qcom/tmecom/tmecom-intf.ko",
+        "drivers/soc/qcom/touchpanel_event_notify.ko",
         "drivers/soc/qcom/wcd_usbss_i2c.ko",
         "drivers/spi/q2spi-geni.ko",
         "drivers/spi/spi-msm-geni.ko",
@@ -306,7 +314,51 @@ def define_sun():
         "net/wireless/cfg80211.ko",
         "sound/soc/codecs/snd-soc-hdmi-codec.ko",
         "sound/usb/snd-usb-audio-qmi.ko",
+        "drivers/misc/haptic_hv/haptic.ko",
+        "drivers/input/fingerprint/goodix_fp.ko",
+        "drivers/soc/qcom/nt_display_notifier.ko",
+        "drivers/nothing_stability/nothing_secure_element.ko",
+        "drivers/nothing_stability/nothing_restart_handler.ko",
+        "drivers/nothing_stability/nothing_bootloader_log.ko",
+        "drivers/nothing_stability/nothing_disk_usage.ko",
+        "drivers/nothing_stability/nothing_task_meminfo.ko",
+        "drivers/nothing_stability/nothing_value_check.ko",
+        "drivers/nothing_stability/nothing_task_info.ko",
+        "drivers/nothing_stability/nothing_error_report.ko",
+        "drivers/nothing_stability/nothing_writeback_kmsg.ko",
+        "drivers/nothing_stability/nothing_check_parts.ko",
+        "drivers/nothing_stability/nothing_task_io.ko",
+        "drivers/nothing_stability/nothing_rdump.ko",
+        "fs/ntfs3/ntfs3.ko",
+        "drivers/nothing_performance/nothing_performance.ko",
     ]
+
+    """ Add kernel module if only match to Nothing Project """
+    Metroid_only_modules = [
+        "drivers/misc/hardware_id.ko",
+        "drivers/input/aw9380x/aw_press.ko",
+        "drivers/leds/matrix-leds/matrix-leds.ko",
+        "drivers/misc/ois_regulator.ko",
+        "drivers/misc/rpmb_state.ko",
+    ]
+    if TARGET_PRODUCT == "Metroid":
+        _sun_in_tree_modules = _sun_in_tree_modules + Metroid_only_modules
+
+    FroggerPro_only_modules = [
+        "drivers/misc/haptic/hapticdrv.ko",
+        "drivers/leds/aw20144/leds-aw20144.ko",
+        "drivers/oem-bootinfo/bootinfo.ko",
+        "drivers/oem-bootinfo/hwinfo.ko",
+        "drivers/oem-bootinfo/errcode.ko",
+        "drivers/oem-bootinfo/cable_state.ko",
+        "drivers/regulator/aw37004-regulator.ko",
+        "drivers/regulator/sgm38120-regulator.ko",
+        "drivers/misc/hardware_id_Froggerpro.ko",
+        "drivers/misc/rpmb_state.ko",
+    ]
+    if TARGET_PRODUCT == "FroggerPro":
+        _sun_in_tree_modules = _sun_in_tree_modules + FroggerPro_only_modules
+    """ End of Nothing Project add kernel module """
 
     _sun_consolidate_in_tree_modules = _sun_in_tree_modules + [
         # keep sorted
@@ -334,16 +386,10 @@ def define_sun():
             board_bootconfig_extras += ["androidboot.serialconsole=1"]
             board_kernel_cmdline_extras += [
                 # do not sort
-                "console=ttyMSM0,115200n8",
-                "qcom_geni_serial.con_enabled=1",
-                "earlycon",
                 "ufshcd_core.uic_cmd_timeout=2000",
             ]
             kernel_vendor_cmdline_extras += [
                 # do not sort
-                "console=ttyMSM0,115200n8",
-                "qcom_geni_serial.con_enabled=1",
-                "earlycon",
             ]
         else:
             mod_list = _sun_in_tree_modules
@@ -372,3 +418,4 @@ def define_sun():
                 board_bootconfig_extras = board_bootconfig_extras,
             ),
         )
+

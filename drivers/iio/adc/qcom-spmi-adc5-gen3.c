@@ -1504,9 +1504,11 @@ struct adc5_channels {
 		BIT(IIO_CHAN_INFO_PROCESSED),				\
 		_pre, _scale)						\
 
+/* Add 'raw' info for volt channel as debug convenience */
 #define ADC5_CHAN_VOLT(_dname, _pre, _scale)				\
 	ADC5_CHAN(_dname, IIO_VOLTAGE,					\
-		  BIT(IIO_CHAN_INFO_PROCESSED),				\
+		  BIT(IIO_CHAN_INFO_PROCESSED)				\
+		  | BIT(IIO_CHAN_INFO_RAW),					\
 		  _pre, _scale)						\
 
 #define ADC5_CHAN_CUR(_dname, _pre, _scale)				\
@@ -1555,10 +1557,17 @@ static const struct adc5_channels adc5_chans_pmic[ADC5_MAX_CHANNEL] = {
 						SCALE_HW_CALIB_THERM_100K_PU_PM7)
 	[ADC5_GEN3_AMUX6_THM_100K_PU]	= ADC5_CHAN_TEMP("amux_thm6_pu2", 0,
 						SCALE_HW_CALIB_THERM_100K_PU_PM7)
+#if IS_ENABLED(CONFIG_NOTHING_IS_FROGGERPRO)
 	[ADC5_GEN3_AMUX1_GPIO_100K_PU]	= ADC5_CHAN_TEMP("amux1_gpio_pu2", 0,
 						SCALE_HW_CALIB_THERM_100K_PU_PM7)
 	[ADC5_GEN3_AMUX2_GPIO_100K_PU]	= ADC5_CHAN_TEMP("amux2_gpio_pu2", 0,
 						SCALE_HW_CALIB_THERM_100K_PU_PM7)
+#else
+	[ADC5_GEN3_AMUX1_GPIO_100K_PU]	= ADC5_CHAN_VOLT("amux1_gpio_pu2", 0,
+						SCALE_HW_CALIB_DEFAULT)
+	[ADC5_GEN3_AMUX2_GPIO_100K_PU]	= ADC5_CHAN_VOLT("amux2_gpio_pu2", 0,
+						SCALE_HW_CALIB_DEFAULT)
+#endif
 	[ADC5_GEN3_AMUX3_GPIO_100K_PU]	= ADC5_CHAN_TEMP("amux3_gpio_pu2", 0,
 						SCALE_HW_CALIB_THERM_100K_PU_PM7)
 	[ADC5_GEN3_AMUX4_GPIO_100K_PU]	= ADC5_CHAN_TEMP("amux4_gpio_pu2", 0,

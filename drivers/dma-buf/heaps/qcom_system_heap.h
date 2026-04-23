@@ -13,9 +13,17 @@
 #include "qcom_dynamic_page_pool.h"
 #include "qcom_sg_ops.h"
 
+#ifdef CONFIG_QCOM_DMABUF_RESERVE_POOL
+#include "qcom_dma_reserve_pool.h"
+#endif
+
+
 struct qcom_system_heap {
 	int uncached;
 	struct dynamic_page_pool **pool_list;
+#ifdef CONFIG_QCOM_DMABUF_RESERVE_POOL
+	struct dynamic_reserve_pool *reserve_pool;
+#endif
 };
 
 #ifdef CONFIG_QCOM_DMABUF_HEAPS_SYSTEM

@@ -20,19 +20,132 @@
 #include <linux/highmem.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/sizes.h>
 #include <linux/scatterlist.h>
 #include <linux/sched/signal.h>
 #include <linux/list.h>
 
+
 #include "qcom_cma_heap.h"
 #include "qcom_sg_ops.h"
+
+
+#define TA_RESV_TA_CMA_NAME "qseecom_ta_region"
+#define TA_RSV_TIMEOUT_MSEC (10 * 60 * 1000)
+#define SZ_10M              0xa00000
+#define SZ_14M              0xe00000
+#define TA_RESV_TA_MIN      SZ_10M
+#define TA_RESV_TA_MAX      SZ_16M
+
+struct cma_resv_ta_cfg {
+	struct cma *cma;
+	unsigned long pages;
+	struct timer_list timer;
+};
 
 struct cma_heap {
 	struct cma *cma;
 	/* max_align is in units of page_order, similar to CONFIG_CMA_ALIGNMENT */
 	u32 max_align;
 	bool uncached;
+	struct cma_resv_ta_cfg *cma_resv_ta;
 };
+
+static inline struct page *cma_alloc_or_resv_ta(struct cma_heap *cma_heap,
+					    unsigned long nr_pages,
+					    unsigned int align,
+					    unsigned long len)
+{
+	struct cma_resv_ta_cfg *cma_resv_ta = cma_heap->cma_resv_ta;
+	struct page *pages;
+
+
+	if (!cma_resv_ta) {
+		goto fallback;
+	}
+
+	if (len > SZ_10M)
+		pr_info("%s warning length:%lu mismatch.\n", __func__, len);
+
+	if (len < TA_RESV_TA_MIN) {
+		pr_info("%s fallback: len(%lu) < MIN(%lu).\n",
+			__func__, len, (unsigned long)TA_RESV_TA_MIN);
+		goto fallback;
+	}
+
+	if (len > TA_RESV_TA_MAX) {
+		pr_info("%s fallback: len(%lu) > MAX(%lu).\n",
+			__func__, len, (unsigned long)TA_RESV_TA_MAX);
+		goto fallback;
+	}
+
+	if (test_and_set_bit(0, &cma_resv_ta->pages)) {
+		pr_info("%s fallback: pages already used (Bit 0 is 1).\n", __func__);
+		goto fallback;
+	}
+
+	pages = (struct page *)(cma_resv_ta->pages & ~1UL);
+	if (pages) {
+		pr_info("%s use TA reserve pages length:%lu.\n", __func__, len);
+		return pages;
+	}
+fallback:
+	return cma_alloc(cma_heap->cma, nr_pages, align, false);
+}
+
+static void cma_resv_ta_release(struct timer_list *t)
+{
+	struct cma_resv_ta_cfg *cma_resv_ta = from_timer(cma_resv_ta, t, timer);
+	size_t size = PAGE_ALIGN(TA_RESV_TA_MAX);
+	unsigned long nr_pages = size >> PAGE_SHIFT;
+	struct page *cma_pages;
+
+	if (test_and_set_bit(0, &cma_resv_ta->pages)) {
+		pr_info("%s rsv_pages already used.\n", __func__);
+		return;
+	}
+
+	cma_pages = (struct page *)(cma_resv_ta->pages & ~1UL);
+	cma_release(cma_resv_ta->cma, cma_pages, nr_pages);
+	pr_info("%s trigger TA reserve pages released.\n", __func__);
+}
+
+static void init_cma_resv_ta(struct cma_heap *cma_heap)
+{
+	struct cma_resv_ta_cfg *cma_resv_ta;
+	size_t size = PAGE_ALIGN(TA_RESV_TA_MAX);
+	unsigned long nr_pages = size >> PAGE_SHIFT;
+	unsigned long align = get_order(size);
+	struct page *cma_pages;
+
+	if (strcmp(cma_get_name(cma_heap->cma), TA_RESV_TA_CMA_NAME) != 0)
+		return;
+
+	cma_resv_ta = kzalloc(sizeof(*cma_resv_ta), GFP_KERNEL);
+	if (!cma_resv_ta) {
+		pr_err("%s failed to allocate cma_resv_ta\n", __func__);
+		return;
+	}
+
+	align = min_t(unsigned long, align, cma_heap->max_align);
+
+	cma_pages = cma_alloc(cma_heap->cma, nr_pages, align, false);
+	if (!cma_pages) {
+		pr_err("%s failed to reserve pages\n", __func__);
+		kfree(cma_resv_ta);
+		return;
+	}
+
+	cma_resv_ta->pages = (unsigned long)cma_pages;
+	cma_resv_ta->cma = cma_heap->cma;
+	cma_heap->cma_resv_ta = cma_resv_ta;
+
+	pr_info("%s TA reseve pages:%lu, size:%u\n", __func__, nr_pages, TA_RESV_TA_MAX);
+
+	timer_setup(&cma_resv_ta->timer, cma_resv_ta_release, 0);
+	mod_timer(&cma_resv_ta->timer, jiffies + msecs_to_jiffies(TA_RSV_TIMEOUT_MSEC));
+}
+
 
 static void cma_heap_free(struct qcom_sg_buffer *buffer)
 {
@@ -81,7 +194,8 @@ struct dma_buf *cma_heap_allocate(struct dma_heap *heap,
 	helper_buffer->uncached = cma_heap->uncached;
 	helper_buffer->free = cma_heap_free;
 
-	cma_pages = cma_alloc(cma_heap->cma, nr_pages, align, false);
+	cma_pages = cma_alloc_or_resv_ta(cma_heap, nr_pages, align, len);
+	//cma_pages = cma_alloc(cma_heap->cma, nr_pages, align, false);
 	if (!cma_pages)
 		goto free_buf;
 
@@ -185,6 +299,8 @@ static int __add_cma_heap(struct platform_heap *heap_data, void *data)
 		kfree(cma_heap);
 		return ret;
 	}
+
+	init_cma_resv_ta(cma_heap);
 
 	if (cma_heap->uncached)
 		dma_coerce_mask_and_coherent(dma_heap_get_dev(heap),

@@ -19,13 +19,139 @@
 
 #define NO_REASON_SHIFT			0
 
+#if IS_ENABLED(CONFIG_NOTHING_IS_METROID) || IS_ENABLED(CONFIG_NOTHING_IS_FROGGERPRO)
+#define QPNP_PON_BUFFER_SIZE		9
+#endif /* CONFIG_NOTHING_IS_METROID */
+
 struct pm8916_pon {
 	struct device *dev;
 	struct regmap *regmap;
 	u32 baseaddr;
 	struct reboot_mode_driver reboot_mode;
 	long reason_shift;
+#if IS_ENABLED(CONFIG_NOTHING_IS_METROID) || IS_ENABLED(CONFIG_NOTHING_IS_FROGGERPRO)
+	u32 force_key_warm_reset;
+#if IS_ENABLED(CONFIG_PINCTRL_MSM_S2IDLE_DUMP)
+    /* Catch dump during S2idle. System wakeup when pwrkey press
+     * Use Resin_N instead. Also disable Resin_N hw interrupt */
+    u32 force_resin_warm_in_s2idle;
+#endif /* CONFIG_PINCTRL_MSM_S2IDLE_DUMP */
+#endif /* CONFIG_NOTHING_IS_METROID */
 };
+
+#if IS_ENABLED(CONFIG_NOTHING_IS_METROID) || IS_ENABLED(CONFIG_NOTHING_IS_FROGGERPRO)
+// Support force key warm_reset feature @{
+static ssize_t force_key_warm_reset_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct pm8916_pon *pon = dev_get_drvdata(dev);
+	return scnprintf(buf, QPNP_PON_BUFFER_SIZE, "%d\n", pon->force_key_warm_reset);
+}
+
+static ssize_t force_key_warm_reset_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t size)
+{
+	struct pm8916_pon *pon = dev_get_drvdata(dev);
+	u32 value;
+	int rc;
+
+	if (size > QPNP_PON_BUFFER_SIZE)
+		return -EINVAL;
+
+	rc = kstrtou32(buf, 10, &value);
+	if (rc)
+		return rc;
+
+	if (value == 1) {
+		/* Disable RESIN_N_S1 and RESIN_N_DEB interrupt */
+		rc = regmap_write(pon->regmap, 0x1316, 0x42);
+		/* Set RESIN_AND_KPDPWR_S2 and PS_HOLD interrupt type to edge trigger */
+		rc |= regmap_write(pon->regmap, 0x811, 0x14);
+		/* Set RESIN_AND_KPDPWR_S2 and PS_HOLD interrupt trigger on falling edge */
+		rc |= regmap_write(pon->regmap, 0x813, 0x14);
+		/* Enable RESIN_AND_KPDPWR_S2 interrupt */
+		rc |= regmap_write(pon->regmap, 0x815, 0x4);
+		/* Set S1 timer to 3072ms */
+		rc |= regmap_write(pon->regmap, 0x844, 0xc);
+		/* Set S2 timer to 2s */
+		rc |= regmap_write(pon->regmap, 0x845, 0x7);
+		/* Set S2 reset type to WARM_RESET */
+		rc |= regmap_write(pon->regmap, 0x846, 0x1);
+		/* Enable S2 reset*/
+		rc |= regmap_write(pon->regmap, 0x847, 0x80);
+
+		if (rc)
+			dev_err(pon->dev, "%s enable registers error\n", __func__);
+	} else if (value == 0) {
+		/* Disable S2 reset */
+		rc = regmap_write(pon->regmap, 0x847, 0x00);
+		if (rc)
+			dev_err(pon->dev, "%s disable register error\n", __func__);
+	}
+	pon->force_key_warm_reset = value;
+
+	return size;
+}
+static DEVICE_ATTR(force_key_warm_reset, 0664, force_key_warm_reset_show, force_key_warm_reset_store);
+
+#if IS_ENABLED(CONFIG_PINCTRL_MSM_S2IDLE_DUMP)
+static ssize_t force_resin_warm_s2idle_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct pm8916_pon *pon = dev_get_drvdata(dev);
+	return scnprintf(buf, QPNP_PON_BUFFER_SIZE, "%d\n", pon->force_resin_warm_in_s2idle);
+}
+
+static ssize_t force_resin_warm_s2idle_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t size)
+{
+	struct pm8916_pon *pon = dev_get_drvdata(dev);
+	u32 value;
+	int rc;
+
+	if (size > QPNP_PON_BUFFER_SIZE)
+		return -EINVAL;
+
+	rc = kstrtou32(buf, 10, &value);
+	if (rc)
+		return rc;
+
+	if (value == 1) {
+		/* Disable RESIN_N_S1 and RESIN_N_DEB interrupt */
+		rc = regmap_write(pon->regmap, 0x1316, 0x42);
+		/* Set RESIN_N_S2 and PS_HOLD interrupt type to edge trigger */
+		rc |= regmap_write(pon->regmap, 0x811, 0x12);
+		/* Set RESIN_N_S2 and PS_HOLD interrupt trigger on falling edge */
+		rc |= regmap_write(pon->regmap, 0x813, 0x12);
+		/* Enable RESIN_N_S2 interrupt */
+		rc |= regmap_write(pon->regmap, 0x815, 0x2);
+		/* Set S1 timer to 2048ms */
+		rc |= regmap_write(pon->regmap, 0x844, 0xb);
+		/* Set S2 timer to 2s */
+		rc |= regmap_write(pon->regmap, 0x845, 0x7);
+		/* Set S2 reset type to WARM_RESET */
+		rc |= regmap_write(pon->regmap, 0x846, 0x1);
+		/* Enable S2 reset */
+		rc |= regmap_write(pon->regmap, 0x847, 0x80);
+		if (rc)
+			dev_err(pon->dev, "%s enable registers error\n", __func__);
+	} else if (value == 0) {
+		/* Disable S2 reset */
+		rc = regmap_write(pon->regmap, 0x847, 0x00);
+		if (rc)
+			dev_err(pon->dev, "%s disable register error\n", __func__);
+	}
+	pon->force_resin_warm_in_s2idle = value;
+
+	return size;
+}
+static DEVICE_ATTR(force_resin_warm_s2idle, 0664, force_resin_warm_s2idle_show, force_resin_warm_s2idle_store);
+#endif /* CONFIG_PINCTRL_MSM_S2IDLE_DUMP */
+// @}
+#endif /* CONFIG_NOTHING_IS_METROID */
+
 
 static int pm8916_reboot_mode_write(struct reboot_mode_driver *reboot,
 				    unsigned int magic)
@@ -79,6 +205,26 @@ static int pm8916_pon_probe(struct platform_device *pdev)
 			return error;
 		}
 	}
+
+#if IS_ENABLED(CONFIG_NOTHING_IS_METROID) || IS_ENABLED(CONFIG_NOTHING_IS_FROGGERPRO)
+// Support force key warm_reset feature @{
+	error = device_create_file(&pdev->dev, &dev_attr_force_key_warm_reset);
+	if (error) {
+		dev_err(&pdev->dev, "sysfs force key warm reset file creation failed, error = %d\n",
+			error);
+		return error;
+	}
+
+#if IS_ENABLED(CONFIG_PINCTRL_MSM_S2IDLE_DUMP)
+	error = device_create_file(&pdev->dev, &dev_attr_force_resin_warm_s2idle);
+	if (error) {
+		dev_err(&pdev->dev, "sysfs force resin warm reset file creation failed, error = %d\n",
+			error);
+		return error;
+	}
+#endif /* CONFIG_PINCTRL_MSM_S2IDLE_DUMP */
+// @}
+#endif /* CONFIG_NOTHING_IS_METROID */
 
 	platform_set_drvdata(pdev, pon);
 

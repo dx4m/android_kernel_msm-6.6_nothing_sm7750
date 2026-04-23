@@ -1217,6 +1217,8 @@ static void walt_find_new_ilb(void *unused, struct cpumask *nohz_idle_cpus_mask,
 
 	*ilb = nr_cpu_ids;
 	for (i = 0; i < num_sched_clusters - 1; i++) {
+		if (!cpu_array || !cpu_array[0])
+			return;
 		for_each_cpu_and(cpu, nohz_idle_cpus_mask, &cpu_array[0][i]) {
 			if (cpu == smp_processor_id())
 				continue;

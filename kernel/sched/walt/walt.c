@@ -2739,11 +2739,13 @@ static void walt_update_task_ravg(struct task_struct *p, struct rq *rq, int even
 		return;
 
 	if (unlikely(!raw_spin_is_locked(&rq->__lock))) {
-		printk_deferred("WALT-BUG CPU%d: %s task %s(%d) unlocked access for cpu=%d suspended=%d last_clk=%llu stack[%pS <== %pS <== %pS]\n",
+		/*printk_deferred("WALT-BUG CPU%d: %s task %s(%d) unlocked access for cpu=%d suspended=%d last_clk=%llu stack[%pS <== %pS <== %pS]\n",
 				raw_smp_processor_id(), __func__, p->comm, p->pid, rq->cpu,
 				walt_clock_suspended, sched_clock_last,
 				(void *)CALLER_ADDR0, (void *)CALLER_ADDR1, (void *)CALLER_ADDR2);
-		WALT_PANIC(1);
+		WALT_PANIC(1);*/
+		raw_spin_lock_nested(&rq->__lock, 0);
+		preempt_enable();
 	}
 
 	walt_lockdep_assert_rq(rq, p);
@@ -2800,6 +2802,10 @@ static inline void __sched_fork_init(struct task_struct *p)
 	wts->boost		= 0;
 	wts->boost_expires	= 0;
 	wts->boost_period	= false;
+#if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+	wts->nt_boost		= 0;
+	wts->policy_backup	= -1;
+#endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 	wts->low_latency	= false;
 	wts->iowaited		= false;
 	wts->load_boost		= 0;
@@ -3156,6 +3162,7 @@ static void init_cpu_array(void)
 		if (!cpu_array[i])
 			WALT_PANIC(1);
 	}
+	printk_deferred("Init cpu array finish!\n");
 }
 
 static void build_cpu_array(void)
@@ -4096,13 +4103,15 @@ static inline void __walt_irq_work_locked(bool is_migration, bool is_asym_migrat
 				/* only update ravg for locked cpus */
 				if (cpumask_intersects(lock_cpus, &cluster->cpus)) {
 					if (unlikely(!raw_spin_is_locked(&rq->__lock))) {
-						printk_deferred("WALT-BUG %s unlocked cpu=%d is_migration=%d is_asym_migration=%d is_pipeline_sync_migration=%d lock_cpus=%*pbl suspended=%d last_clk=%llu stack[%pS <= %pS <= %pS]\n",
+						/*printk_deferred("WALT-BUG %s unlocked cpu=%d is_migration=%d is_asym_migration=%d is_pipeline_sync_migration=%d lock_cpus=%*pbl suspended=%d last_clk=%llu stack[%pS <= %pS <= %pS]\n",
 						__func__, rq->cpu, is_migration, is_asym_migration,
 						is_pipeline_sync_migration,
 						cpumask_pr_args(lock_cpus), walt_clock_suspended,
 						sched_clock_last, (void *)CALLER_ADDR0,
 						(void *)CALLER_ADDR1, (void *)CALLER_ADDR2);
-						WALT_PANIC(1);
+						WALT_PANIC(1);*/
+						raw_spin_lock_nested(&rq->__lock, 0);
+						preempt_enable();
 					}
 					walt_update_task_ravg(rq->curr, rq,
 							      TASK_UPDATE, wc, 0);

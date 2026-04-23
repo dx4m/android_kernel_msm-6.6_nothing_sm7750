@@ -965,4 +965,6 @@ source "drivers/leds/trigger/Kconfig"
 comment "Simple LED drivers"
 source "drivers/leds/simple/Kconfig"
 
+source "drivers/leds/matrix-leds/Kconfig"
+source "drivers/leds/aw20144/Kconfig"
 endif # NEW_LEDS

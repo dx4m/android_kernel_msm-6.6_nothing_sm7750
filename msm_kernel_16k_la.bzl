@@ -30,6 +30,10 @@ load(":msm_common.bzl", "define_top_level_config", "gen_config_without_source_li
 load(":msm_dtc.bzl", "define_dtc_dist")
 load(":target_variants.bzl", "la_variants")
 
+# Nothing Project setup
+load("@nt_project//:dict.bzl", "TARGET_PRODUCT")
+# end
+
 def _define_build_config(
         msm_target,
         target,
@@ -107,6 +111,8 @@ EOF
         ] + [fragment for fragment in build_config_fragments] + [
             "build.config.msm.common",
             "build.config.msm.perf",
+            # Load nothing project config
+            "build.config.nothing.{}".format(TARGET_PRODUCT),
         ],
     )
 

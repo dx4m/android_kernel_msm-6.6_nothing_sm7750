@@ -22,6 +22,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spinlock.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/spi/spi-msm-geni.h>
 
 #define SPI_NUM_CHIPSELECT	(4)
 #define SPI_XFER_TIMEOUT_MS	(250)
@@ -153,11 +154,10 @@ struct gsi_desc_cb {
 	struct spi_transfer *xfer;
 };
 
-struct spi_geni_qcom_ctrl_data {
-	u32 spi_cs_clk_delay;
-	u32 spi_inter_words_delay;
-};
-
+//struct spi_geni_qcom_ctrl_data {
+//	u32 spi_cs_clk_delay;
+//	u32 spi_inter_words_delay;
+//};
 struct spi_geni_gsi {
 	struct msm_gpi_tre lock_t;
 	struct msm_gpi_tre unlock_t;

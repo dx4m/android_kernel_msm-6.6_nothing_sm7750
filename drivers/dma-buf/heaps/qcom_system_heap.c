@@ -61,6 +61,11 @@
 #include "qcom_system_movable_heap.h"
 #include "../../../mm/internal.h"
 
+#ifdef CONFIG_QCOM_DMABUF_RESERVE_POOL
+#include "qcom_dma_reserve_pool.h"
+#endif
+
+
 #if IS_ENABLED(CONFIG_QCOM_DMABUF_HEAPS_PAGE_POOL_REFILL)
 #define DYNAMIC_POOL_FILL_MARK (100 * SZ_1M)
 #define DYNAMIC_POOL_LOW_MARK_PERCENT 40UL
@@ -382,7 +387,12 @@ static void system_heap_deferred_free(struct deferred_freelist_item *item,
 				if (compound_order(page) == orders[j])
 					break;
 			}
-			dynamic_page_pool_free(sys_heap->pool_list[j], page);
+#ifdef CONFIG_QCOM_DMABUF_RESERVE_POOL
+			if (!dynamic_reserve_pool_free(sys_heap->reserve_pool, page, j))
+				continue;
+			else
+#endif
+				dynamic_page_pool_free(sys_heap->pool_list[j], page);
 		}
 	}
 	sg_free_table(table);
@@ -458,6 +468,11 @@ int system_qcom_sg_buffer_alloc(struct dma_heap *heap,
 
 	INIT_LIST_HEAD(&pages);
 	i = 0;
+
+#ifdef CONFIG_QCOM_DMABUF_RESERVE_POOL
+	dynamic_reserve_pool_alloc(sys_heap->reserve_pool, &size_remaining, &max_order, &pages, &i);
+#endif
+
 	while (size_remaining > 0) {
 		/*
 		 * Avoid trying to allocate memory if the process
@@ -611,6 +626,10 @@ void qcom_system_heap_create(const char *name, const char *system_alias, bool un
 	ret = system_heap_create_refill_worker(sys_heap, name);
 	if (ret)
 		goto free_pools;
+
+#ifdef CONFIG_QCOM_DMABUF_RESERVE_POOL
+	sys_heap->reserve_pool = dynamic_reserve_pool_create_start();
+#endif
 
 	heap = dma_heap_add(&exp_info);
 	if (IS_ERR(heap)) {

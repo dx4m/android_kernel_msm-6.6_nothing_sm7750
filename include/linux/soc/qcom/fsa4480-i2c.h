@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #ifndef FSA4480_I2C_H
 #define FSA4480_I2C_H
@@ -23,6 +24,9 @@ int fsa4480_reg_notifier(struct notifier_block *nb,
 			 struct device_node *node);
 int fsa4480_unreg_notifier(struct notifier_block *nb,
 			   struct device_node *node);
+bool is_fsa4480_odm_method(void);
+int odm_wcd_sleep_before(void);
+int odm_wcd_sleep_after(void);
 #else
 static inline int fsa4480_switch_event(struct device_node *node,
 				       enum fsa_function event)
@@ -41,6 +45,22 @@ static inline int fsa4480_unreg_notifier(struct notifier_block *nb,
 {
 	return 0;
 }
+
+static inline bool is_fsa4480_odm_method(void)
+{
+	reture false;
+}
+
+static inline int odm_wcd_sleep_before(void)
+{
+	reture 0;
+}
+
+static inline int odm_wcd_sleep_after(void)
+{
+	reture 0;
+}
+
 #endif /* CONFIG_QCOM_FSA4480_I2C */
 
 #endif /* FSA4480_I2C_H */

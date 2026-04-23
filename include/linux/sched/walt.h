@@ -124,6 +124,10 @@ struct walt_task_struct {
 	u64				active_time;
 	u64				last_win_size;
 	int				boost;
+#if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+	int				nt_boost;
+	int				policy_backup;
+#endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 	bool				wake_up_idle;
 	bool				misfit;
 	bool				rtg_high_prio;

@@ -587,6 +587,48 @@ config PKVM_SMC_FILTER
 
 	  Say N here unless you know what you are doing.
 
+config NOTH_CABLE_DETECT
+	tristate "Nothing antenna cable detect driver support"
+	help
+		Say Y here to support Nothing antenna cable detect driver
+		If unsure, say N
+
+config NOTH_HARDWARE_ID
+	tristate "Nothing hardware ID driver support"
+	help
+		Say Y here to support Nothing hardware ID driver
+		If unsure, say N
+
+config NOTH_HARDWARE_ID_FROGGERPRO
+        tristate "Nothing hardware ID driver support"
+        help
+                Say Y here to support Nothing hardware ID driver
+                If unsure, say N
+
+config NOTH_SLOT_CHECK
+	tristate "Nothing USIM slot check driver support"
+	help
+		Say Y here to support Nothing USIM slot check driver
+		If unsure, say N
+
+config NOTH_SECURE_STATE
+	tristate "Nothing secure state driver support"
+	help
+		Say Y here to support NOTHING device secure state driver
+		If unsure, say N
+
+config NOTH_RPMB_STATE
+	tristate "Nothing RPMB State Driver support"
+	help
+		Say Y here to support NOTHING device RPMB state driver
+		If unsure, say N
+
+config OIS_REGULATOR_DEBUG
+	tristate "ois regulator debug driver support"
+	help
+		Say Y here to support OIS regulator debug driver
+		If unsure, say N
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
@@ -604,4 +646,6 @@ source "drivers/misc/cardreader/Kconfig"
 source "drivers/misc/uacce/Kconfig"
 source "drivers/misc/pvpanic/Kconfig"
 source "drivers/misc/mchp_pci1xxxx/Kconfig"
+source "drivers/misc/haptic_hv/Kconfig"
+source "drivers/misc/haptic/Kconfig"
 endmenu

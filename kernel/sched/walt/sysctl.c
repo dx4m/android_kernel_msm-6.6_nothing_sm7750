@@ -420,6 +420,9 @@ enum {
 	LOAD_BOOST,
 	REDUCE_AFFINITY,
 	MPAM_PART_ID,
+#if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+	NT_PER_TASK_BOOST,
+#endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 };
 
 static int sched_task_handler(struct ctl_table *table, int write,
@@ -472,6 +475,11 @@ static int sched_task_handler(struct ctl_table *table, int write,
 				div64_ul(wts->boost_period,
 					 1000000UL);
 			break;
+#if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+		case NT_PER_TASK_BOOST:
+			pid_and_val[1] = wts->nt_boost;
+			break;
+#endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 		case LOW_LATENCY:
 			pid_and_val[1] = !!(wts->low_latency &
 					 WALT_LOW_LATENCY_PROCFS_BIT);
@@ -538,6 +546,12 @@ static int sched_task_handler(struct ctl_table *table, int write,
 			ret = -EINVAL;
 			goto put_task;
 		}
+#if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+		if (wts->nt_boost != 0) {
+			wts->boost = wts->nt_boost;
+			break;
+		}
+#endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 		wts->boost = val;
 		if (val == 0)
 			wts->boost_period = 0;
@@ -551,6 +565,18 @@ static int sched_task_handler(struct ctl_table *table, int write,
 		wts->boost_period = (u64)val * 1000 * 1000;
 		wts->boost_expires = sched_clock() + wts->boost_period;
 		break;
+#if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+	case NT_PER_TASK_BOOST:
+		if (val < TASK_BOOST_NONE || val >= TASK_BOOST_END) {
+			ret = -EINVAL;
+			goto put_task;
+		}
+		wts->nt_boost = val;
+		wts->boost = wts->nt_boost;
+		if (val == 0)
+			wts->boost_period = 0;
+		break;
+#endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 	case LOW_LATENCY:
 		if (val)
 			wts->low_latency |= WALT_LOW_LATENCY_PROCFS_BIT;
@@ -1704,6 +1730,15 @@ static struct ctl_table walt_table[] = {
 		.mode		= 0644,
 		.proc_handler	= sched_task_handler,
 	},
+#if IS_ENABLED(CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT)
+	{
+		.procname	= "nt_sched_per_task_boost",
+		.data		= (int *) NT_PER_TASK_BOOST,
+		.maxlen		= sizeof(unsigned int) * 2,
+		.mode		= 0666,
+		.proc_handler	= sched_task_handler,
+	},
+#endif /* CONFIG_NOTHING_PERFORMANCE_FEATURE_WALT */
 	{
 		.procname	= "sched_low_latency",
 		.data		= (int *) LOW_LATENCY,

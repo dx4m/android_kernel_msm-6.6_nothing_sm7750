@@ -1,0 +1,8 @@
+TARGET_PRODUCT=Metroid
+NT_PROJECT=Metroid
+echo "!!! build.config.nothing.Metroid: TARGET_PRODUCT=${TARGET_PRODUCT} !!!"
+echo "!!! build.config.nothing.Metroid: NT_PROJECT=${NT_PROJECT} !!!"
+apply_defconfig_fragment ${KERNEL_DIR}/arch/${ARCH}/configs/vendor/${TARGET_PRODUCT}.config
+
+echo "!!! add  -DNT_PROJECT=${TARGET_PRODUCT}"
+export KBUILD_CFLAGS+=" -DNT_PROJECT=${TARGET_PRODUCT}"

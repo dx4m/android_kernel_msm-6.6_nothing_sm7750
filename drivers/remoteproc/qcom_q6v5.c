@@ -23,6 +23,9 @@
 #include "qcom_q6v5.h"
 #include <trace/events/rproc_qcom.h>
 
+#include <linux/slab.h>
+static struct platform_device *q6v5_pdev = NULL;
+
 #define Q6V5_LOAD_STATE_MSG_LEN	64
 #define Q6V5_PANIC_DELAY_MS	200
 
@@ -144,6 +147,9 @@ static irqreturn_t q6v5_wdog_interrupt(int irq, void *data)
 	size_t len;
 	char *msg;
 
+	int ret;
+	char *envp[3];
+
 	/* Sometimes the stop triggers a watchdog rather than a stop-ack */
 	if (!q6v5->running) {
 		complete(&q6v5->stop_done);
@@ -176,8 +182,18 @@ static irqreturn_t q6v5_wdog_interrupt(int irq, void *data)
 
 	if (q6v5->rproc->recovery_disabled)
 		queue_work(system_unbound_wq, &q6v5->crash_handler);
-	else
+	else {
+		envp[0] = kasprintf(GFP_KERNEL, "SUBSYS_NAME=%s", dev_name(q6v5->dev));
+		envp[1] = kasprintf(GFP_KERNEL, "CRASH_REASON=%s", msg);
+		envp[2] = NULL;
+		pr_err("fire an uevent for subsys crash! ++ \n");
+		ret = kobject_uevent_env(&q6v5_pdev->dev.kobj, KOBJ_CHANGE, envp);
+		pr_err("fire an uevent for subsys crash! -- %d\n", ret);
+		kfree(envp[0]);
+		kfree(envp[1]);
+
 		rproc_report_crash(q6v5->rproc, RPROC_WATCHDOG);
+	}
 
 	return IRQ_HANDLED;
 }
@@ -187,6 +203,9 @@ static irqreturn_t q6v5_fatal_interrupt(int irq, void *data)
 	struct qcom_q6v5 *q6v5 = data;
 	size_t len;
 	char *msg;
+
+	int ret;
+	char *envp[3];
 
 	if (!q6v5->running)
 		return IRQ_HANDLED;
@@ -218,9 +237,18 @@ static irqreturn_t q6v5_fatal_interrupt(int irq, void *data)
 
 	if (q6v5->rproc->recovery_disabled)
 		queue_work(system_unbound_wq, &q6v5->crash_handler);
-	else
-		rproc_report_crash(q6v5->rproc, RPROC_FATAL_ERROR);
+	else {
+		envp[0] = kasprintf(GFP_KERNEL, "SUBSYS_NAME=%s", dev_name(q6v5->dev));
+		envp[1] = kasprintf(GFP_KERNEL, "CRASH_REASON=%s", msg);
+		envp[2] = NULL;
+		pr_err("fire an uevent for subsys crash! ++ \n");
+		ret = kobject_uevent_env(&q6v5_pdev->dev.kobj, KOBJ_CHANGE, envp);
+		pr_err("fire an uevent for subsys crash! -- %d\n", ret);
+		kfree(envp[0]);
+		kfree(envp[1]);
 
+		rproc_report_crash(q6v5->rproc, RPROC_FATAL_ERROR);
+	}
 	return IRQ_HANDLED;
 }
 
@@ -458,6 +486,14 @@ int qcom_q6v5_init(struct qcom_q6v5 *q6v5, struct platform_device *pdev,
 	}
 
 	INIT_WORK(&q6v5->crash_handler, qcom_q6v5_crash_handler_work);
+
+	if (q6v5_pdev)
+		pr_err("q6v5_pdev exist\n");
+	else {
+		pr_err("q6v5_pdev is NULL, save pdev, pdev->dev.kobj name: '%s' (%p): %s\n",
+				kobject_name(&pdev->dev.kobj), &pdev->dev.kobj, __func__);
+		q6v5_pdev = pdev;
+	}
 
 	return 0;
 }

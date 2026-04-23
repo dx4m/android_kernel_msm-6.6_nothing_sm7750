@@ -600,8 +600,8 @@ config QCOM_WDOG_BITE_EARLY_PANIC
 config QCOM_WATCHDOG_BARK_TIME
 	depends on QCOM_WDT_CORE
 	int "Qualcomm Technologies, Inc. Watchdog bark time in ms"
-	default 11000
-	range 11000 11000
+	default 20000
+	range 20000 20000
 	help
 	  The amount of time, in milliseconds, that should elapse after
 	  a watchdog timer reset before a bark interrupt is sent from the
@@ -610,8 +610,8 @@ config QCOM_WATCHDOG_BARK_TIME
 config QCOM_WATCHDOG_PET_TIME
 	depends on QCOM_WDT_CORE
 	int "Qualcomm Technologies, Inc. Watchdog pet time in ms"
-	default 9360
-	range 9360 9360
+	default 15000
+	range 15000 15000
 	help
 	  The amount of time, in milliseconds, that should elapse before
 	  a watchdog pet is initiated to reset the watchdog timer to 0.
@@ -712,6 +712,18 @@ config QCOM_ADSP_SLEEPMON
 	   activity notifications from these userspace clients, the driver
 	   detects and logs sleep violations from ADSP subsystem. The driver
 	   uses master stats from ADSP subsystem stored in SMEM.
+
+config NOTHING_POWERINFO_RPMH
+    bool "RPMH move to sysfs"
+    default n
+    help
+        This option move d/qcom_sleep_stats to sys/module/qcom_stats
+
+config NOTHING_POWERINFO_STANDBY
+    bool "powerinfo standby debug"
+    default n
+    help
+        This option open powerinfo standby debug
 
 config USB_BAM
         tristate "USB BAM Driver"
@@ -1080,6 +1092,13 @@ config QCOM_PANEL_EVENT_NOTIFIER
 	  can use these notifications for power saving or align its operations
 	  with display panel power state.
 
+config NT_DISPLAY_NOTIFIER
+	tristate "hbm&ui event notifier"
+	help
+	  Enabling this option adds nt display hbm&ui event notifier driver.
+	  This driver is responsible for notifying clients, such as fingerprint,
+	  interested in display hbm&ui status to decide capture image or not.
+
 config QCOM_SPMI_PMIC_ERR_DBG
 	tristate "Qualcomm SPMI protocol error IRQ handler"
 	depends on QCOM_SCM
@@ -1245,6 +1264,12 @@ config QTI_DMOF_SCMI
 	  It is intended to be used by clients familiar with
 	  Memcpy Optimization Feature on Qualcomm Technologies, Inc. SOCs.
 
+config NT_TOUCH_NOTIFIER
+	tristate "TP fod event notifier"
+	help
+	  Enabling this option adds nt TP fod event notifier driver.
+	  This driver is responsible for notifying clients, such as fingerprint.
+
 config QCOM_PMIC_ECID
 	tristate "QCOM PMIC ECID driver"
 	help
@@ -1252,6 +1277,14 @@ config QCOM_PMIC_ECID
 	  This driver reads the chipset ECID details from the respective address and
 	  exposes the details via sysfs interface.
 	  This helps in identification of PMIC part information.
+
+config NOTHING_IS_METROID
+	bool "Determine if Metroid project"
+	default n
+
+config NOTHING_IS_FROGGERPRO
+	bool "Determine if FroggerPro project"
+	default n
 
 config QTI_HW_KEY_MANAGER_V1
 	tristate "Enable QTI Hardware Key Manager v1 for storage encryption"

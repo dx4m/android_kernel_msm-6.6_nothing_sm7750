@@ -1,0 +1,6 @@
+
+config LEDS_MATRIX_LEDS
+	tristate "LED Support for Nothing matrix led"
+	help
+	  this option enables support for the matrix LEDs connected
+	  through SPI. Say Y to enable support for matrix LEDs automatically.

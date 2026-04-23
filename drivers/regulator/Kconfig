@@ -225,6 +225,22 @@ config REGULATOR_AW37503
 	  This driver supports AW37503 single inductor - dual output
 	  power supply specifically designed for display panels.
 
+config REGULATOR_AW37004
+	tristate "Awinic AW37004 Dual Output Power regulators"
+	depends on I2C && GPIOLIB
+	select REGMAP_I2C
+	help
+	  This driver supports AW37004 single inductor - dual output
+	  power supply specifically designed for display panels.
+
+config REGULATOR_SGM38120
+	tristate "Awinic SGM38120 Dual Output Power regulators"
+	depends on I2C && GPIOLIB
+	select REGMAP_I2C
+	help
+	  This driver supports SGM38120 single inductor - dual output
+	  power supply specifically designed for display panels.
+
 config REGULATOR_AXP20X
 	tristate "X-POWERS AXP20X PMIC Regulators"
 	depends on MFD_AXP20X
@@ -1066,6 +1082,13 @@ config REGULATOR_QCOM_PM8008
 	  chip enablement of Qualcomm Technologies, Inc. PM8008 PMIC chips.
 	  When all seven of the PM8008 LDO regulators are disabled, the PM8008
 	  is put into a low power state.
+
+config REGULATOR_WL28681
+	tristate "WL28681 PMIC regulators"
+	help
+	  This driver provides support for the voltage regulators and top-level
+	  chip enablement, Inc. WL28681 PMIC chips. When all seven of the WL28681
+          LDO regulators are disabled, the WL28681 is put into a low power state.
 
 config REGULATOR_QCOM_RPM
 	tristate "Qualcomm RPM regulator driver"

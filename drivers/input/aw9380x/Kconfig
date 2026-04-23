@@ -1,0 +1,11 @@
+#
+# cs press driver configuration
+#
+
+config AW9380X
+	tristate "aw press"
+	help
+	  Say Y here if you have a press
+
+	  If build module, say M.
+	  If unsure, say N.

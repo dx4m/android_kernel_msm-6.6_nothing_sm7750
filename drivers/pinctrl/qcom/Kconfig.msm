@@ -71,6 +71,12 @@ config PINCTRL_MONACO
           Say Y here to compile statically, or M here to compile it as a
           module. If unsure, say N.
 
+config PINCTRL_MSM_S2IDLE_DUMP
+	bool "Qualcomm Pinctrl S2Idle Dump"
+	depends on GPIOLIB && DEBUG_FS
+	help
+	  Say yes here to enable gpio dump during s2idle.
+
 config PINCTRL_APQ8064
 	tristate "Qualcomm APQ8064 pin controller driver"
 	depends on ARM || COMPILE_TEST

@@ -34,6 +34,7 @@
 #include <asm/hardirq.h>
 #include <linux/suspend.h>
 #include <linux/notifier.h>
+#include <linux/nothing_restart_handler.h>
 
 #define MASK_SIZE        32
 
@@ -698,6 +699,8 @@ static irqreturn_t qcom_wdt_bark_handler(int irq, void *dev_id)
 	nanosec_rem = do_div(t, 1000000000);
 	dev_info(wdog_dd->dev, "QCOM Apps Watchdog bark! Now = %lu.%06lu\n",
 			(unsigned long) t, nanosec_rem / 1000);
+
+        set_restart_msg("QCOM Apps Watchdog bark!");
 
 	nanosec_rem = do_div(tp, 1000000000);
 	dev_info(wdog_dd->dev, "QCOM Apps Watchdog last pet at %lu.%06lu\n",
