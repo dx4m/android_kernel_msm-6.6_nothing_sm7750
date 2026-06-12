@@ -6,6 +6,9 @@
       - vendor/qcom/proprietary/
       - vendor/qcom/opensource/
 
+ 2. NOS 4.1(FroggerPro-B4.1-260424-1447)
+   - Improve haptic
+
 # How do I submit patches to Android Common Kernels
 
 1. BEST: Make all of your changes to upstream Linux. If appropriate, backport to the stable releases.
