@@ -28,6 +28,10 @@
 #include <linux/nvmem-consumer.h>
 #include <linux/ipc_logging.h>
 #include <linux/pinctrl/qcom-pinctrl.h>
+#if IS_ENABLED(CONFIG_QTI_CRYPTO_FDE)
+#include <linux/crypto-qti-common.h>
+#include <linux/of_platform.h>
+#endif
 
 #include <soc/qcom/ice.h>
 
@@ -613,7 +617,8 @@ static unsigned int msm_get_clock_mult_for_bus_mode(struct sdhci_host *host)
 	 */
 	if (ios.timing == MMC_TIMING_UHS_DDR50 ||
 	    ios.timing == MMC_TIMING_MMC_DDR52 ||
-	    ios.timing == MMC_TIMING_MMC_HS400 ||
+	    (ios.timing == MMC_TIMING_MMC_HS400 &&
+	    ios.clock == MMC_HS200_MAX_DTR) ||
 	    host->flags & SDHCI_HS400_TUNING)
 		return 2;
 	return 1;
@@ -3051,15 +3056,37 @@ static int sdhci_msm_ice_init(struct sdhci_msm_host *msm_host,
 
 static void sdhci_msm_ice_enable(struct sdhci_msm_host *msm_host)
 {
-	if (msm_host->mmc->caps2 & MMC_CAP2_CRYPTO)
-		qcom_ice_enable(msm_host->ice);
+	int err;
+
+	if (msm_host->mmc->caps2 & MMC_CAP2_CRYPTO) {
+		err = qcom_ice_enable(msm_host->ice);
+
+		if (err) {
+			dev_warn(
+				mmc_dev(msm_host->mmc),
+				"Could not enable ICE err=%d, Disabling inline encryption capability.\n",
+				err);
+			msm_host->mmc->caps2 &= ~MMC_CAP2_CRYPTO;
+		}
+	}
 }
 
 static __maybe_unused int sdhci_msm_ice_resume(struct sdhci_msm_host *msm_host)
 {
-	if (msm_host->mmc->caps2 & MMC_CAP2_CRYPTO)
-		return qcom_ice_resume(msm_host->ice);
+	int err;
 
+	if (msm_host->mmc->caps2 & MMC_CAP2_CRYPTO) {
+		err = qcom_ice_resume(msm_host->ice);
+
+		if (err) {
+			dev_warn(
+				mmc_dev(msm_host->mmc),
+				"Could not resume ICE err=%d, Disabling inline encryption capability.\n",
+				err);
+			msm_host->mmc->caps2 &= ~MMC_CAP2_CRYPTO;
+		}
+		return err;
+	}
 	return 0;
 }
 
@@ -5069,6 +5096,30 @@ static int sdhci_msm_setup_pwr_irq(struct sdhci_msm_host *msm_host)
 	return 0;
 }
 
+#if IS_ENABLED(CONFIG_QTI_CRYPTO_FDE)
+static int sdhci_crypto_probe_check(struct device *dev)
+{
+	struct platform_device *dep_pdev;
+	struct device_node *dep_dev;
+
+	dep_dev = of_parse_phandle(dev->of_node, "sdhc-msm-crypto", 0);
+	if (dep_dev) {
+		dep_pdev = of_find_device_by_node(dep_dev);
+		if (!dep_pdev || !dep_pdev->dev.driver) {
+			of_node_put(dep_dev);
+			dev_warn(dev, "Failed to create sdcc-ice data structures\n");
+			if (dep_pdev)
+				platform_device_put(dep_pdev);
+			return -EPROBE_DEFER;
+		}
+		platform_device_put(dep_pdev);
+		of_node_put(dep_dev);
+		dev_dbg(dev, "sdcc-ice probe successfully\n");
+	}
+	return 0;
+}
+#endif
+
 static int sdhci_msm_probe(struct platform_device *pdev)
 {
 	struct sdhci_host *host;
@@ -5085,6 +5136,11 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		dev_err(dev, "SDHCI is not boot dev.\n");
 		return 0;
 	}
+
+#if IS_ENABLED(CONFIG_QTI_CRYPTO_FDE)
+	if (sdhci_crypto_probe_check(dev))
+		return -EPROBE_DEFER;
+#endif
 
 	host = sdhci_pltfm_init(pdev, &sdhci_msm_pdata, sizeof(*msm_host));
 	if (IS_ERR(host))
