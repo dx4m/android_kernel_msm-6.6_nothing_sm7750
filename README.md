@@ -9,6 +9,11 @@
  2. NOS 4.1(FroggerPro-B4.1-260424-1447)
    - Improve haptic
 
+ 3. NOS 4.1(FroggerPro-B4.1-260522-1414)
+   - Improve Stability
+   - Debug thermal and TP
+   - Merge code to kernel 6.6.102
+
 # How do I submit patches to Android Common Kernels
 
 1. BEST: Make all of your changes to upstream Linux. If appropriate, backport to the stable releases.
